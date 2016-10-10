@@ -27,6 +27,8 @@ SOFTWARE.
 
 #### Sean UN Wood, September 2016
 
+*To play the audio examples in this notebook, please view it with the* [Jupyter Notebook Viewer](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/gcc-nmf.ipynb).
+
 ## Abstract
 
 This **iPython Notebook** is a demo of GCC-NMF blind source separation algorithm, combining:
