@@ -103,7 +103,7 @@ def plotGCCPHATLocalization(spectralCoherenceV, angularSpectrogram, meanAngularS
 def plotRows(xValues, rowValues, color, scalingFactor):
     numRows = rowValues.shape[0]
     maxValue = max(rowValues)
-    for rowIndex in xrange(numRows):
+    for rowIndex in range(numRows):
         plot(xValues, rowValues[rowIndex] / maxValue * scalingFactor + rowIndex, color)
     axis('tight')
     ylim( (0, numRows) )
@@ -111,7 +111,7 @@ def plotRows(xValues, rowValues, color, scalingFactor):
 def plotCols(yValues, colValues, color, scalingFactor):
     numCols = colValues.shape[1]
     maxValue = max(colValues)
-    for colIndex in xrange(numCols):
+    for colIndex in range(numCols):
         plot(yValues, colValues[:, colIndex] / maxValue * scalingFactor + colIndex, color)
     axis('tight')
     ylim( (0, numCols))
