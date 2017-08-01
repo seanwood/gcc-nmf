@@ -32,7 +32,7 @@ from scipy.io import wavfile
 from scipy.signal import argrelmax
 from os.path import basename, join
 
-from librosaSTFT import stft, istft
+from gccNMF.librosaSTFT import stft, istft
 import logging
 
 SPEED_OF_SOUND_IN_METRES_PER_SECOND = 340.29

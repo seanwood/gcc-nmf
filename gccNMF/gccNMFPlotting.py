@@ -24,7 +24,7 @@ SOFTWARE.
 @author: Sean UN Wood
 '''
 
-from gccNMFFunctions import *
+from gccNMF.gccNMFFunctions import *
 from matplotlib.pyplot import *
 from numpy import arange, max, abs, linspace, angle
 
