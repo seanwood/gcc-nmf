@@ -72,8 +72,8 @@ def performKLNMF(V, dictionarySize, numIterations, sparsityAlpha, epsilon=1e-16,
     
     W = random( (V.shape[0], dictionarySize) ).astype(float32) + epsilon
     H = random( (dictionarySize, V.shape[1]) ).astype(float32) + epsilon
-    
-    for iterationIndex in xrange(numIterations):
+
+    for iterationIndex in range(numIterations):
         H *= dot( W.T, V / dot( W, H ) ) / ( sum(W, axis=0)[:, newaxis] + sparsityAlpha + epsilon )
         W *= dot( V / dot( W, H ), H.T ) / sum(H, axis=1)
         
@@ -139,7 +139,7 @@ def getTargetCoefficientMasks(targetTDOAGCCNMFs, numTargets):
     nanArgMax = nanargmax(targetTDOAGCCNMFs, axis=0)
     
     targetCoefficientMasks = zeros_like(targetTDOAGCCNMFs)
-    for targetIndex in xrange(numTargets):
+    for targetIndex in range(numTargets):
         targetCoefficientMasks[targetIndex][where(nanArgMax==targetIndex)] = 1
     return targetCoefficientMasks
     
@@ -155,9 +155,9 @@ def getTargetSignalEstimates(targetSpectrogramEstimates, windowSize, hopSize, wi
     numTargets, numChannels, numFreq, numTime = targetSpectrogramEstimates.shape
     
     targetSignalEstimates = []
-    for targetIndex in xrange(numTargets):
+    for targetIndex in range(numTargets):
         currentSignalEstimates = []
-        for channelIndex in xrange(numChannels):
+        for channelIndex in range(numChannels):
             currentSignalEstimates.append( istft(targetSpectrogramEstimates[targetIndex, channelIndex], hopSize, windowSize, windowFunction) )
         targetSignalEstimates.append(currentSignalEstimates)
     return array(targetSignalEstimates)
@@ -166,6 +166,6 @@ def saveTargetSignalEstimates(targetSignalEstimates, sampleRate, mixtureFileName
     numTargets = targetSignalEstimates.shape[0]
     
     targetSignalEstimates = (targetSignalEstimates * float32(2**16 / 2)).astype(int16)
-    for targetIndex in xrange(numTargets):
+    for targetIndex in range(numTargets):
         sourceEstimateFileName = getSourceEstimateFileName(mixtureFileNamePrefix, targetIndex)
         wavfile.write( sourceEstimateFileName, sampleRate, targetSignalEstimates[targetIndex].T )
