@@ -27,7 +27,7 @@ SOFTWARE.
 from numpy.random import random, seed
 from numpy import hanning, array, squeeze, arange, concatenate, sqrt, sum, dot, newaxis, linspace, \
     exp, outer, pi, einsum, argsort, mean, hsplit, zeros, empty, min, max, isnan, all, nanargmax, empty_like, \
-    where, zeros_like, angle, arctan2, int16, float32, complex64 
+    where, zeros_like, angle, arctan2, int16, float32, complex64, argmax, take
 from scipy.io import wavfile
 from scipy.signal import argrelmax
 from os.path import basename, join
