@@ -35,7 +35,7 @@ def wavread(filePath):
     
 def wavwrite(samples_float32, filePath, sampleRate):
     samples_pcm = float2pcm(samples_float32)
-    wavfile.write( filePath, sampleRate, samples_pcm )
+    wavfile.write( filePath, sampleRate, samples_pcm.T )
     
 """
 Helper functions for working with audio files in NumPy.
