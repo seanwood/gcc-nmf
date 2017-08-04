@@ -34,6 +34,8 @@ def wavread(filePath):
     return samples_float32.T, sampleRate
     
 def wavwrite(samples_float32, filePath, sampleRate):
+    if np.max(np.abs(samples_float32)) > 1:
+        raise ValueError('wavwrite: max abs signal value exceeds 1')
     samples_pcm = float2pcm( samples_float32.astype(np.float32) )
     wavfile.write( filePath, sampleRate, samples_pcm.T )
     

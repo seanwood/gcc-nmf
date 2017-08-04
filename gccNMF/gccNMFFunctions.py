@@ -152,6 +152,7 @@ def getTargetSpectrogramEstimates(targetCoefficientMasks, complexMixtureSpectrog
 
 def getTargetSignalEstimates(targetSpectrogramEstimates, windowSize, hopSize, windowFunction):
     numTargets, numChannels, numFreq, numTime = targetSpectrogramEstimates.shape
+    stftGainFactor = hopSize / float(windowSize) * 2
     
     targetSignalEstimates = []
     for targetIndex in range(numTargets):
@@ -159,7 +160,7 @@ def getTargetSignalEstimates(targetSpectrogramEstimates, windowSize, hopSize, wi
         for channelIndex in range(numChannels):
             currentSignalEstimates.append( istft(targetSpectrogramEstimates[targetIndex, channelIndex], hopSize, windowSize, windowFunction) )
         targetSignalEstimates.append(currentSignalEstimates)
-    return array(targetSignalEstimates)
+    return array(targetSignalEstimates) * stftGainFactor
 
 def saveTargetSignalEstimates(targetSignalEstimates, sampleRate, mixtureFileNamePrefix):
     numTargets = targetSignalEstimates.shape[0]
