@@ -28,12 +28,12 @@ from numpy.random import random, seed
 from numpy import hanning, array, squeeze, arange, concatenate, sqrt, sum, dot, newaxis, linspace, \
     exp, outer, pi, einsum, argsort, mean, hsplit, zeros, empty, min, max, isnan, all, nanargmax, empty_like, \
     where, zeros_like, angle, arctan2, int16, float32, complex64, argmax, take
-from scipy.io import wavfile
 from scipy.signal import argrelmax
 from os.path import basename, join
+import logging
 
 from gccNMF.librosaSTFT import stft, istft
-import logging
+from gccNMF.wavfile import wavread, wavwrite
 
 SPEED_OF_SOUND_IN_METRES_PER_SECOND = 340.29
 
@@ -45,8 +45,7 @@ def getSourceEstimateFileName(mixtureFileNamePrefix, targetIndex):
     return sourceEstimateFileName
 
 def loadMixtureSignal(mixtureFileName):
-    sampleRate, stereoSamples = wavfile.read(mixtureFileName)
-    return stereoSamples.T / float32(2**16 / 2), sampleRate
+    return wavread(mixtureFileName)
 
 def getMaxTDOA(microphoneSeparationInMetres):
     return microphoneSeparationInMetres / SPEED_OF_SOUND_IN_METRES_PER_SECOND
@@ -164,8 +163,6 @@ def getTargetSignalEstimates(targetSpectrogramEstimates, windowSize, hopSize, wi
 
 def saveTargetSignalEstimates(targetSignalEstimates, sampleRate, mixtureFileNamePrefix):
     numTargets = targetSignalEstimates.shape[0]
-    
-    targetSignalEstimates = (targetSignalEstimates * float32(2**16 / 2)).astype(int16)
     for targetIndex in range(numTargets):
         sourceEstimateFileName = getSourceEstimateFileName(mixtureFileNamePrefix, targetIndex)
-        wavfile.write( sourceEstimateFileName, sampleRate, targetSignalEstimates[targetIndex].T )
+        wavwrite( targetSignalEstimates[targetIndex], sourceEstimateFileName, sampleRate )
