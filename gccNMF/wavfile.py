@@ -27,15 +27,23 @@ SOFTWARE.
 import numpy as np
 import contextlib
 from scipy.io import wavfile
+import logging
+
+CLIP_PROTECTION_MAX_SAMPLE_VALUE = 0.99
 
 def wavread(filePath):
     sampleRate, samples_pcm = wavfile.read(filePath)
     samples_float32 = pcm2float(samples_pcm)
     return samples_float32.T, sampleRate
     
-def wavwrite(samples_float32, filePath, sampleRate):
-    if np.max(np.abs(samples_float32)) > 1:
-        raise ValueError('wavwrite: max abs signal value exceeds 1')
+def wavwrite(samples_float32, filePath, sampleRate, clipProtection=True):
+    maxAbsValue = np.max(np.abs(samples_float32)) 
+    if maxAbsValue >= 1:
+        if clipProtection:
+            logging.warning('wavwrite: max abs signal value exceeds 1, rescaling to %2f' % CLIP_PROTECTION_MAX_SAMPLE_VALUE)
+            samples_float32 = samples_float32 / maxAbsValue * CLIP_PROTECTION_MAX_SAMPLE_VALUE
+        else:
+            raise ValueError('wavwrite: max abs signal value exceeds 1')
     samples_pcm = float2pcm( samples_float32.astype(np.float32) )
     wavfile.write( filePath, sampleRate, samples_pcm.T )
     
