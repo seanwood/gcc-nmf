@@ -1,5 +1,6 @@
 .DS_Store
 *sim*.wav
+data/realtimeGCCNMFPretrainedW
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
