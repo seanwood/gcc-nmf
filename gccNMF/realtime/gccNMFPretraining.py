@@ -33,8 +33,8 @@ from collections import OrderedDict
 from gccNMF.gccNMFFunctions import performKLNMF
 from gccNMF.defs import DATA_DIR
 
-PRETRAINED_W_DIR = join(DATA_DIR, 'realtimeGCCNMFPretrainedW')
-PRETRAINED_W_PATH_TEMPLATE = join(PRETRAINED_W_DIR, 'realtimeGCCNMFPretrainedW_%d.np')
+PRETRAINED_W_DIR = join(DATA_DIR, 'pretrainedW')
+PRETRAINED_W_PATH_TEMPLATE = join(PRETRAINED_W_DIR, 'W_%d.npy')
 
 SPARSITY_ALPHA = 0
 NUM_PRELEARNING_ITERATIONS = 100
@@ -67,14 +67,14 @@ def getOrderedDictionary(W):
     
 def loadPretrainedW(dictionarySize, retrainW=False):
     pretrainedWFilePath = PRETRAINED_W_PATH_TEMPLATE % dictionarySize
-    logging.info('Loading pretrained W: %s' % pretrainedWFilePath)
+    logging.info('GCCNMFPretraining: Loading pretrained W (size %d): %s' % (dictionarySize, pretrainedWFilePath) )
     if exists(pretrainedWFilePath) and not retrainW:
         W = np.load(pretrainedWFilePath)
     else:
         if retrainW:
-            logging.info('Retraining W, saving as %s...' % pretrainedWFilePath)
+            logging.info('GCCNMFPretraining: Retraining W, saving as %s...' % pretrainedWFilePath)
         else:
-            logging.info('Pretrained W not found at %s, creating...' % pretrainedWFilePath)
+            logging.info('GCCNMFPretraining: Pretrained W not found at %s, creating...' % pretrainedWFilePath)
         
         trainV = np.load(CHIME_DATASET_PATH)
         W, _ = performKLNMF(trainV, dictionarySize, numIterations=100, sparsityAlpha=0, epsilon=1e-16, seedValue=0)
@@ -83,6 +83,5 @@ def loadPretrainedW(dictionarySize, retrainW=False):
             makedirs(PRETRAINED_W_DIR)
         except:
             pass
-        with open(pretrainedWFilePath, 'w') as pretrainedWFile:
-            np.save(pretrainedWFile, W)
+        np.save(pretrainedWFilePath, W)
     return W

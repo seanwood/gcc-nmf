@@ -79,6 +79,7 @@ def getDefaultConfig():
     return configParser
 
 def getDictFromConfig(config):
+    logging.info('GCCNMFConfig: loading configuration params...')
     dictionary = {}
     for section in config.sections():
         logging.info(section)

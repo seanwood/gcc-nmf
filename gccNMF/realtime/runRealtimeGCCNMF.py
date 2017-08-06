@@ -90,8 +90,6 @@ class RealtimeGCCNMF(object):
                                            self.processFramesEvent, self.processFramesDoneEvent, self.terminateEvent)
         self.audioProcess.start()
         self.gccNMFProcess.start()
-        
-        self.run(params)
     
     def run(self, params):
         try:
