@@ -70,7 +70,7 @@ In the [Low Latency Speech Enhancement iPython notebook](https://nbviewer.jupyte
 [![png](README_files/lowLatencySpeechEnhancementNotebookThumbnail.png)](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/lowLatencySpeechEnhancement.ipynb)
 
 ## Real-time Speech Enhancement
-This standalone Python executable is a real-time implementation of the online GCC-NMF speech enhancement algorithm. Users may 
+The [Real-time Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/realtimeSpeechEnhancement.ipynb) standalone Python executable is a real-time implementation of the online GCC-NMF speech enhancement algorithm. Users may 
 interactively modify system parameters including the NMF dictionary size and GCC-NMF masking function parameters, where the effects on speech enhancement quality may be heard in real-time.
 
 [![png](README_files/realtimeGCCNMFScreenshot.png)](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/realtimeSpeechEnhancement.ipynb)
