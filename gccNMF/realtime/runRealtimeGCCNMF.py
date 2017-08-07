@@ -30,7 +30,7 @@ import logging
 import ctypes
 import numpy as np
 
-from multiprocessing import Event, Queue, Array
+from multiprocessing import Event, Queue, Array, freeze_support
 
 from gccNMF.defs import DEFAULT_AUDIO_FILE, DEFAULT_CONFIG_FILE
 from gccNMF.realtime.utils import SharedMemoryCircularBuffer, OverlapAddProcessor
@@ -179,6 +179,8 @@ class RealtimeGCCNMFNoGUI(RealtimeGCCNMF):
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
+    
+    freeze_support() # for multiprocessing on Windows
     
     args = parseArguments()
     if not args.no_gui:
