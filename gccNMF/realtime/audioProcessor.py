@@ -34,7 +34,7 @@ from gccNMF.wavfile import pcm2float, float2pcm
 
 class PyAudioStreamProcessor(Process):
     def __init__(self, numChannels, sampleRate, windowSize, hopSize, blockSize, deviceIndex,
-                 togglePlayQueue, togglePlayAck, inputFrames, outputFrames, processFramesEvent, processFramesDoneEvent, terminateEvent):
+                 playingFlag, paramsNamespace, inputFrames, outputFrames, processFramesEvent, processFramesDoneEvent, terminateEvent):
         super(PyAudioStreamProcessor, self).__init__()
 
         self.numChannels = numChannels
@@ -42,9 +42,9 @@ class PyAudioStreamProcessor(Process):
         self.windowSize = windowSize
         self.hopSize = hopSize
         self.blockSize = blockSize
-        
-        self.togglePlayQueue = togglePlayQueue
-        self.togglePlayAck = togglePlayAck
+
+        self.playingFlag = playingFlag
+        self.paramsNamespace = paramsNamespace
         self.inputFrames = inputFrames
         self.outputFrames = outputFrames
         self.processFramesEvent = processFramesEvent
@@ -62,46 +62,58 @@ class PyAudioStreamProcessor(Process):
         self.pyaudio = None
         
         self.fileNameChanged = False
-        
+ 
     def run(self):
         #os.nice(-20)
         
         lastPrintTime = tm.time()
         
         while True:
-            currentTime = tm.time()            
+            if self.shouldTerminate():
+                return
+             
+            self.updateFileName()
+            self.updatePlaying()
             
-            if self.terminateEvent.is_set():
-                logging.debug('AudioStreamProcessor: received terminate')
+            currentTime = tm.time()
+            if currentTime - lastPrintTime >= 2 and len(self.processingTimes) != 0:
+                logging.info( 'Processing times (min/max/avg): %f, %f, %f' % (np.min(self.processingTimes), np.max(self.processingTimes), np.mean(self.processingTimes)) )
+                lastPrintTime = currentTime
+                del self.processingTimes[:]
+                
+            sleep(0.1)
+        
+    def shouldTerminate(self):
+        if self.terminateEvent.is_set():
+            logging.debug('AudioStreamProcessor: received terminate')
+            try:
                 if self.audioStream:
                     self.audioStream.close()
                     logging.debug('AudioStreamProcessor: stream stopped')
-                return
-            
-            if not self.togglePlayQueue.empty():
-                parameters = self.togglePlayQueue.get()
-                logging.debug('AudioStreamProcessor: received togglePlayParams')
-                
-                fileName = parameters['fileName']
-                if fileName != self.fileName:
-                    self.fileName = fileName
-                    self.fileNameChanged = True
-                    if self.active():
-                        self.reset()
+            finally:
+                return True
+        return False
         
-                if 'stop' in parameters: self.stopStream()
-                elif 'start' in parameters: self.startStream()        
-                
-                logging.debug('AudioStreamProcessor: processed togglePlayParams')
-                self.togglePlayAck.set()
-                logging.debug('AudioStreamProcessor: ack set')
-            elif currentTime - lastPrintTime >= 2:
-                if len(self.processingTimes) != 0:
-                    logging.info( 'Processing times (min/max/avg): %f, %f, %f' % (np.min(self.processingTimes), np.max(self.processingTimes), np.mean(self.processingTimes)) )
-                    lastPrintTime = currentTime
-                    del self.processingTimes[:]
-            else:
-                sleep(0.1)
+    def updateFileName(self):
+        try:
+            currentFileName = self.paramsNamespace.fileName
+        except:
+            return
+            
+        if currentFileName != self.fileName:
+            logging.info('AudioStreamProcessor: setting file name: %s' % currentFileName) 
+            self.fileName = currentFileName
+            
+            active = self.active()
+            self.resetAudioStream()
+            if active:
+                self.startStream()
+
+    def updatePlaying(self):
+        if bool(self.playingFlag.value) and not self.active():
+            self.startStream()
+        elif not bool(self.playingFlag.value) and self.active():
+            self.stopStream()
     
     def filePlayerCallback(self, in_data, numFrames, time_info, status):
         startTime = tm.time()
@@ -138,10 +150,8 @@ class PyAudioStreamProcessor(Process):
             return self.audioStream.is_active()
 
     def startStream(self):
-        if not self.audioStream or self.fileNameChanged:
-            logging.info('AudioStreamProcessor: creating stream...')
-            self.fileNameChanged = False
-            self.reset()
+        if not self.audioStream:
+            self.resetAudioStream()
         logging.info('AudioStreamProcessor: starting stream')
         self.audioStream.start_stream()
         
@@ -149,16 +159,7 @@ class PyAudioStreamProcessor(Process):
         if self.audioStream:
             logging.info('AudioStreamProcessor: stopping stream')
             self.audioStream.stop_stream()
-            
-    def reset(self):
-        if self.audioStream:
-            logging.info('AudioStreamProcessor: aborting stream')
-            self.audioStream.close()
-        self.createAudioStream()
-        
-    def togglePlay(self):
-        self.stopStream() if self.active() else self.startStream()
-
+    
     def logProcessingTimes(self):
         if len(self.processingTimes) == 0:
             return
@@ -180,12 +181,17 @@ class PyAudioStreamProcessor(Process):
         logging.info( 'Min/max/mean/std processing time: %f, %f, %f, %f. Num underflows: %d (min/max/meanTimeToProcess' % (minProcessingTime, maxProcessingTime, meanProcessingTime, stdProcessingTime, numUnderflows) )
         logging.info( 'min/max/mean/std time to process: %f, %f, %f, %f' % (minTimeToProcess, maxTimeToProcess, meanTimeToProcess, stdTimeToProcess) )
             
-    def createAudioStream(self):
+    def resetAudioStream(self):
         import wave        
         import pyaudio
         
         if self.pyaudio is None:
             self.pyaudio = pyaudio.PyAudio()
+
+        if self.audioStream:
+            logging.info('AudioStreamProcessor: aborting stream')
+            self.audioStream.close()
+            self.audioStream = None
         
         self.paContinue = pyaudio.paContinue
         

@@ -95,3 +95,7 @@ ENV/
 # Eclipse project settings
 .project
 .pydevproject
+
+# kernprof
+*.lprof
+*.prof

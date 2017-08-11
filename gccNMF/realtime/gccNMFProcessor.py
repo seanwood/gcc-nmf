@@ -25,10 +25,11 @@ SOFTWARE.
 '''
 
 import logging
-from time import sleep
+from time import sleep, time
 import numpy as np
 from numpy.fft import rfft
 from multiprocessing import Process
+import os
 
 from gccNMF.defs import SPEED_OF_SOUND_IN_METRES_PER_SECOND
 
@@ -36,24 +37,22 @@ TARGET_MODE_BOXCAR = 0
 TARGET_MODE_MULTIPLE = 1
 TARGET_MODE_WINDOW_FUNCTION = 2
 
-class GCCNMFProcess(Process):
-    def __init__(self, oladProcessor, sampleRate, windowSize, numTimePerChunk, dictionariesW, dictionaryType, dictionarySize, numHUpdates, microphoneSeparationInMetres,
-                 gccPHATHistory, inputSpectrogramHistory, outputSpectrogramHistory, coefficientMaskHistories, 
-                 tdoaParametersQueue, tdoaParametersAck, togglePlayQueue, togglePlayAck, toggleSeparationQueue, toggleSeparationAck,
-                 processFramesEvent, processFramesDoneEvent, terminateEvent):
-        super(GCCNMFProcess, self).__init__()
+GCC_NMF_PARAMETERS_REQUIRING_RESET = ['microphoneSeparationInMetres', 'numTDOAs', 'dictionarySize'] # 'numSources', 'targetMode', 'gccPHATNLEnabled', 'dictionaryType'
 
+class GCCNMFProcess(Process):
+    from theano.compile.sharedvalue import SharedVariable
+    
+    def __init__(self, oladProcessor, numTDOAs, sampleRate, windowSize, numTimePerChunk, dictionariesW, dictionaryType, dictionarySize, numHUpdates, microphoneSeparationInMetres,
+                 gccPHATHistory, inputSpectrogramHistory, outputSpectrogramHistory, coefficientMaskHistories,
+                 gccNMFParams, gccNMFDirtyParamNames, processFramesEvent, processFramesDoneEvent, terminateEvent):
+        super(GCCNMFProcess, self).__init__()
+        
         self.oladProcessor = oladProcessor
-        self.gccNMFProcessor = GCCNMFProcessor(sampleRate, windowSize, numTimePerChunk, dictionariesW, dictionaryType, dictionarySize, numHUpdates, microphoneSeparationInMetres,
+        self.gccNMFProcessor = GCCNMFProcessor(numTDOAs, sampleRate, windowSize, numTimePerChunk, dictionariesW, dictionaryType, dictionarySize, numHUpdates, microphoneSeparationInMetres,
                                                gccPHATHistory, inputSpectrogramHistory, outputSpectrogramHistory, coefficientMaskHistories)
-        
-        self.tdoaParametersQueue = tdoaParametersQueue
-        self.tdoaParametersAck = tdoaParametersAck
-        self.togglePlayQueue = togglePlayQueue
-        self.togglePlayAck = togglePlayAck
-        self.toggleSeparationQueue = toggleSeparationQueue
-        self.toggleSeparationAck = toggleSeparationAck
-        
+
+        self.gccNMFParams = gccNMFParams
+        self.gccNMFDirtyParamNames = gccNMFDirtyParamNames        
         self.processFramesEvent = processFramesEvent
         self.processFramesDoneEvent = processFramesDoneEvent
         self.terminateEvent = terminateEvent
@@ -61,105 +60,62 @@ class GCCNMFProcess(Process):
     def run(self):
         #os.nice(-20)
         while True:
-            if self.terminateEvent.is_set():
-                logging.info('GCCNMFProcessor: received terminate')
+            if self.shouldTerminate():
                 return
             
-            wait = True
+            #logging.info('GCCNMFProcessor: Waiting for processFramesEvent')
+            self.processFramesEvent.wait()
+            #logging.info('GCCNMFProcessor: processFramesEvent is set!')
+            self.processFramesEvent.clear()
             
-            if not self.tdoaParametersQueue.empty():
-                logging.debug('GCCNMFProcessor: received tdoaParams')
-                self.processTDOAParametersQueue()
-                logging.debug('AudioStreamProcessor: processed tdoaParams')
-                self.tdoaParametersAck.set()
-                logging.debug('AudioStreamProcessor: ack set')
-                wait = False
-            
-            if not self.togglePlayQueue.empty():
-                logging.debug('GCCNMFProcessor: received togglePlayParams')
-                self.processTogglePlayQueue()
-                logging.debug('GCCNMFProcessor: processed togglePlayParams')
-                self.togglePlayAck.set()
-                logging.debug('GCCNMFProcessor: ack set')
-                wait = False
+            try:
+                if len(self.gccNMFDirtyParamNames) != 0:
+                    #startTime = time()
+                    self.updateGCCNMFParams()
+                    #elapsedTime = time() - startTime
+                    #logging.info('GCCNMFProcessor: Updating params toooook: %.10f' % elapsedTime)
+            except Exception as e:
+                logging.info('GCCNMFProcessor: Failed to update params')
+                logging.info(e)
                 
-            if not self.toggleSeparationQueue.empty():
-                logging.debug('GCCNMFProcessor: received toggleSeparationParams')
-                self.processToggleSeparationQueue()
-                logging.debug('GCCNMFProcessor: processed toggleSeparationParams')
-                self.toggleSeparationAck.set()
-                logging.debug('GCCNMFProcessor: ack set')
-                wait = False
+            self.oladProcessor.processFrames(self.gccNMFProcessor.processFrames)
             
-            if self.processFramesEvent.is_set():
-                self.processFramesEvent.clear()
-                #logging.info('GCCNMFProcessor: received processFramesEvent')
-                self.oladProcessor.processFrames(self.gccNMFProcessor.processFrames)
-                #logging.info('GCCNMFProcessor: setting processFramesDoneEvent')
-                self.processFramesDoneEvent.set()
-                #logging.info('GCCNMFProcessor: set processFramesDoneEvent')
-                wait = False
-            
-            if wait:
-                sleep(0.001)
+            #logging.info('Setting processFramesDoneEvent')
+            self.processFramesDoneEvent.set()
     
-    def processTDOAParametersQueue(self):
-        parameters = self.tdoaParametersQueue.get()
-        if 'targetTDOAIndexes' in parameters:
-            targetTDOAIndexes = parameters['targetTDOAIndexes']
-            logging.info( 'GCCNMFProcessor: setting targetTDOAIndexes: %s' % str(targetTDOAIndexes) )
-            self.gccNMFProcessor.setTargetTDOAIndexes(targetTDOAIndexes)
-        else:
-            targetTDOAIndex = parameters['targetTDOAIndex']
-            targetTDOAEpsilon = parameters['targetTDOAEpsilon']
-            targetTDOABeta = parameters['targetTDOABeta']
-            targetTDOANoiseFloor = parameters['targetTDOANoiseFloor']
-            logging.info( 'GCCNMFProcessor: setting targetTDOAIndex: %.2f, targetTDOAEpsilon: %.2f, targetTDOABeta: %.2f, targetTDOANoiseFloor: %.2f' % \
-                          (targetTDOAIndex, targetTDOAEpsilon, targetTDOABeta, targetTDOANoiseFloor)) 
-            self.gccNMFProcessor.setTargetTDOARange(targetTDOAIndex, targetTDOAEpsilon, targetTDOABeta, targetTDOANoiseFloor)
-             
-    def processTogglePlayQueue(self):
-        from theano.compile.sharedvalue import SharedVariable
+    def shouldTerminate(self):
+        if self.terminateEvent.is_set():
+            logging.debug('GCCNMFProcessor: received terminate')
+            return True
+        return False
+    
+    def updateGCCNMFParams(self):
+        params = self.gccNMFParams
         
-        parameters = self.togglePlayQueue.get()
-        parametersRequiringReset = ['microphoneSeparationInMetres', 'numTDOAs', 'numSources', 'targetMode',
-                                    'dictionarySize', 'dictionaryType', 'gccPHATNLEnabled']
-
-        resetGCCNMFProcessor = False
-        for parameterName, parameterValue in parameters.items():
-            if not hasattr(self.gccNMFProcessor, parameterName):
-                logging.info('GCCNMFProcessor: setting %s: %s' % (parameterName, parameterValue))
-                setattr(self.gccNMFProcessor, parameterName, parameterValue)
-                resetGCCNMFProcessor |= parameterName in parametersRequiringReset
-            else:
-                currentParam = getattr(self.gccNMFProcessor, parameterName)
-                if issubclass(type(currentParam), SharedVariable):
-                    if currentParam.get_value() != parameterValue:
-                        logging.info('GCCNMFProcessor: setting %s: %s (shared)' % (parameterName, parameterValue))
+        resetRequired = False
+        for parameterName in self.gccNMFDirtyParamNames:
+            parameterValue = getattr(params, parameterName)
+            currentParam = getattr(self.gccNMFProcessor, parameterName)
+            if issubclass(type(currentParam), GCCNMFProcess.SharedVariable):
+                if currentParam.get_value() != parameterValue:
+                    logging.info('GCCNMFProcessor: setting %s: %s (shared)' % (parameterName, parameterValue))
+                    if currentParam.dtype == 'float32':
+                        currentParam.set_value(np.float32(parameterValue))
+                    else:
                         currentParam.set_value(parameterValue)
-                    else:
-                        logging.info('GCCNMFProcessor: %s unchanged: %s (shared)' % (parameterName, parameterValue))
-                else:
-                    if currentParam != parameterValue:
-                        logging.info('GCCNMFProcessor: setting %s: %s' % (parameterName, parameterValue))
-                        setattr(self.gccNMFProcessor, parameterName, parameterValue)
-                    else:
-                        logging.info('GCCNMFProcessor: %s unchanged: %s' % (parameterName, parameterValue))
-                resetGCCNMFProcessor |= parameterName in parametersRequiringReset
+                    resetRequired |= parameterName in GCC_NMF_PARAMETERS_REQUIRING_RESET
+            else:
+                if currentParam != parameterValue:
+                    logging.info('GCCNMFProcessor: setting %s: %s' % (parameterName, parameterValue))
+                    setattr(self.gccNMFProcessor, parameterName, parameterValue)
+                    resetRequired |= parameterName in GCC_NMF_PARAMETERS_REQUIRING_RESET
 
-        if resetGCCNMFProcessor:
+        del self.gccNMFDirtyParamNames[:]
+        if resetRequired:
             self.gccNMFProcessor.reset()
     
-    def processToggleSeparationQueue(self):
-        parameters = self.toggleSeparationQueue.get()
-
-        if 'separationEnabled' in parameters:
-            separationEnabled = parameters['separationEnabled']
-            logging.info( 'GCCNMFProcessor: setting separationEnabled: %s' % str(separationEnabled) )
-            self.gccNMFProcessor.separationEnabled = separationEnabled
-    
 class GCCNMFProcessor(object):
-    def __init__(self, sampleRate, windowSize, numTimePerChunk, dictionariesW, dictionaryType, dictionarySize, numHUpdates, microphoneSeparationInMetres,
+    def __init__(self, numTDOAs, sampleRate, windowSize, numTimePerChunk, dictionariesW, dictionaryType, dictionarySize, numHUpdates, microphoneSeparationInMetres,
                  gccPHATHistory=None, inputSpectrogramHistory=None, outputSpectrogramHistory=None, coefficientMaskHistories=None):
         super(GCCNMFProcessor, self).__init__()
         
@@ -179,7 +135,7 @@ class GCCNMFProcessor(object):
         self.windowFunction = np.sqrt( np.hamming(self.windowSize).astype(np.float32) )[:, np.newaxis]
         self.synthesisWindowFunction = self.windowFunction
         
-        self.numTDOAs = None
+        self.numTDOAs = numTDOAs
         self.separationEnabled = True
         self.targetMode = TARGET_MODE_WINDOW_FUNCTION
         
@@ -188,6 +144,8 @@ class GCCNMFProcessor(object):
         self.targetTDOAEpsilon = shared( np.float32(2.0) )
         self.targetTDOABeta = shared( np.float32(1.0) )
         self.targetTDOANoiseFloor = shared( np.float32(0.0) )
+        
+        self.reset()
         
     def processFrames(self, windowedSamples):
         self.complexMixtureSpectrogram[:] = rfft(windowedSamples * self.windowFunction, axis=1).astype(np.complex64)

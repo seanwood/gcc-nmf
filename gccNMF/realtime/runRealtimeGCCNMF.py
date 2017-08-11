@@ -30,7 +30,7 @@ import logging
 import ctypes
 import numpy as np
 
-from multiprocessing import Event, Queue, Array, freeze_support
+from multiprocessing import Array, Event, Manager, Value, freeze_support
 
 from gccNMF.defs import DEFAULT_AUDIO_FILE, DEFAULT_CONFIG_FILE
 from gccNMF.realtime.utils import SharedMemoryCircularBuffer, OverlapAddProcessor
@@ -44,26 +44,28 @@ class RealtimeGCCNMF(object):
         
         logging.info('RealtimeGCCNMF: Starting with audio path: %s' % params.audioPath)
         
-        self.initQueuesAndEvents()
+        self.initQueuesAndEvents(params)
         self.initSharedArrays(params)
         self.initHistoryBuffers(params)
         self.initProcesses(params)
         
         self.run(params)
     
-    def initQueuesAndEvents(self):
-        self.togglePlayAudioProcessQueue = Queue()
-        self.togglePlayAudioProcessAck = Event()
-        self.togglePlayGCCNMFProcessQueue = Queue()
-        self.togglePlayGCCNMFProcessAck = Event()
-        self.toggleSeparationGCCNMFProcessQueue = Queue()
-        self.toggleSeparationGCCNMFProcessAck = Event()
-        self.tdoaParamsGCCNMFProcessQueue = Queue()
-        self.tdoaParamsGCCNMFProcessAck = Event()
-        
+    def initQueuesAndEvents(self, params):
         self.processFramesEvent = Event()
         self.processFramesDoneEvent = Event()
         self.terminateEvent = Event()
+        
+        self.paramsManager = Manager()
+        self.paramsNamespace = self.paramsManager.Namespace()
+        
+        self.gccNMFParamsManager = Manager()
+        self.gccNMFParams = self.gccNMFParamsManager.Namespace()
+        self.gccNMFParams.microphoneSeparationInMetres = params.microphoneSeparationInMetres
+        self.gccNMFParams.numSources = 1 #params.numSources
+        self.gccNMFDirtyParamNames = self.gccNMFParamsManager.list() 
+        
+        self.audioPlayingFlag = Value('i', 0)
     
     def initSharedArrays(self, params):    
         inputFramesArray = Array(ctypes.c_double, params.numChannels*params.blockSize)
@@ -81,13 +83,11 @@ class RealtimeGCCNMF(object):
         
     def initProcesses(self, params):
         self.audioProcess = AudioStreamProcessor(params.numChannels, params.sampleRate, params.windowSize, params.hopSize, params.blockSize, params.deviceIndex,
-                                                 self.togglePlayAudioProcessQueue, self.togglePlayAudioProcessAck,
-                                                 self.inputFrames, self.outputFrames, self.processFramesEvent, self.processFramesDoneEvent, self.terminateEvent)
+                                                 self.audioPlayingFlag, self.paramsNamespace, self.inputFrames, self.outputFrames, self.processFramesEvent, self.processFramesDoneEvent, self.terminateEvent)
         self.oladProcessor = OverlapAddProcessor(params.numChannels, params.windowSize, params.hopSize, params.blockSize, params.windowsPerBlock, self.inputFrames, self.outputFrames)
-        self.gccNMFProcess = GCCNMFProcess(self.oladProcessor, params.sampleRate, params.windowSize, params.windowsPerBlock, params.dictionariesW, params.dictionaryType, params.dictionarySize, params.numHUpdates, params.microphoneSeparationInMetres,
+        self.gccNMFProcess = GCCNMFProcess(self.oladProcessor, params.numTDOAs, params.sampleRate, params.windowSize, params.windowsPerBlock, params.dictionariesW, params.dictionaryType, params.dictionarySize, params.numHUpdates, params.microphoneSeparationInMetres,
                                            self.gccPHATHistory, self.inputSpectrogramHistory, self.outputSpectrogramHistory, self.coefficientMaskHistories,
-                                           self.tdoaParamsGCCNMFProcessQueue, self.tdoaParamsGCCNMFProcessAck, self.togglePlayGCCNMFProcessQueue, self.togglePlayGCCNMFProcessAck, self.toggleSeparationGCCNMFProcessQueue, self.toggleSeparationGCCNMFProcessAck,
-                                           self.processFramesEvent, self.processFramesDoneEvent, self.terminateEvent)
+                                           self.gccNMFParams, self.gccNMFDirtyParamNames, self.processFramesEvent, self.processFramesDoneEvent, self.terminateEvent)
         self.audioProcess.start()
         self.gccNMFProcess.start()
     
@@ -100,10 +100,7 @@ class RealtimeGCCNMF(object):
             gccNMFInterfaceWindow = RealtimeGCCNMFInterfaceWindow(params.audioPath, params.numTDOAs, params.gccPHATNLAlpha, params.gccPHATNLEnabled, params.dictionariesW, params.dictionarySize,
                                                                   params.dictionarySizes, params.dictionaryType, params.numHUpdates,
                                                                   self.gccPHATHistory, self.inputSpectrogramHistory, self.outputSpectrogramHistory, self.coefficientMaskHistories,
-                                                                  self.togglePlayAudioProcessQueue, self.togglePlayAudioProcessAck,
-                                                                  self.togglePlayGCCNMFProcessQueue, self.togglePlayGCCNMFProcessAck,
-                                                                  self.tdoaParamsGCCNMFProcessQueue, self.tdoaParamsGCCNMFProcessAck,
-                                                                  self.toggleSeparationGCCNMFProcessQueue, self.toggleSeparationGCCNMFProcessAck)
+                                                                  self.audioPlayingFlag, self.paramsNamespace, self.gccNMFParams, self.gccNMFDirtyParamNames)
             app.exec_()
             logging.info('Window closed')
             self.terminateEvent.set()
@@ -113,7 +110,7 @@ class RealtimeGCCNMF(object):
             
             self.gccNMFProcess.join()
             logging.info('GCCNMF process joined')
-        
+            
         finally:
             self.audioProcess.terminate()
             self.gccNMFProcess.terminate()
@@ -127,42 +124,21 @@ class RealtimeGCCNMFNoGUI(RealtimeGCCNMF):
         self.inputSpectrogramHistory = None
         self.outputSpectrogramHistory = None
         self.coefficientMaskHistories = None
-    
-    def queueParams(self, queue, ack, params, label='params'):
-        ack.clear()
-        logging.debug('HeadlessGCCNMF: putting %s' % label)
-        queue.put(params)
-        logging.debug('HeadlessGCCNMF: put %s' % label)
-        ack.wait()
-        logging.debug('HeadlessGCCNMF: ack received')
         
     def initParams(self, params):
-        self.queueParams(self.tdoaParamsGCCNMFProcessQueue,
-                         self.tdoaParamsGCCNMFProcessAck,
-                         {'targetTDOAIndex': 9.60,
-                          'targetTDOAEpsilon': params.targetTDOAEpsilon,
-                          'targetTDOABeta': params.targetTDOABeta,
-                          'targetTDOANoiseFloor': params.targetTDOANoiseFloor},
-                         'gccNMFProcessTDOAParameters (region)')
+        self.gccNMFParams.targetTDOAIndex = 9.60
+        
+        paramNames = ['targetTDOAEpsilon', 'targetTDOABeta', 'targetTDOANoiseFloor', 'numTDOAs', 'dictionarySize', 'microphoneSeparationInMetres']
+        for paramName in paramNames:
+            setattr( self.gccNMFParams, paramName, getattr(params, paramName) )
+        self.gccNMFDirtyParamNames.extend(paramNames)
+        
+        self.gccNMFParams.separationEnabled = True
+        self.gccNMFDirtyParamNames.append('separationEnabled')
+        
+        self.paramsNamespace.fileName = params.audioPath
+        self.audioPlayingFlag.value = True
 
-        self.queueParams(self.togglePlayGCCNMFProcessQueue,
-                         self.togglePlayGCCNMFProcessAck,
-                         {'numTDOAs': params.numTDOAs,
-                          'dictionarySize': params.dictionarySize,
-                          'microphoneSeparationInMetres': params.microphoneSeparationInMetres},
-                         'gccNMFProcessTogglePlayParameters')
-
-        self.queueParams(self.toggleSeparationGCCNMFProcessQueue,
-                         self.toggleSeparationGCCNMFProcessAck,
-                         {'separationEnabled': True},
-                         'separationEnabledParameters')
-
-        self.queueParams(self.togglePlayAudioProcessQueue,
-                         self.togglePlayAudioProcessAck,
-                         {'fileName': params.audioPath,
-                          'start': ''},
-                         'audioProcessParameters')
-            
     def run(self, params):
         self.initParams(params)
         

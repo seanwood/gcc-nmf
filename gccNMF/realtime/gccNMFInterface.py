@@ -40,10 +40,7 @@ BUTTON_WIDTH = 50
 class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
     def __init__(self, audioPath, numTDOAs, gccPHATNLAlpha, gccPHATNLEnabled, dictionariesW, dictionarySize, dictionarySizes, dictionaryType, numHUpdates,
                  gccPHATHistory, inputSpectrogramHistory, outputSpectrogramHistory, coefficientMaskHistories,
-                 togglePlayAudioProcessQueue, togglePlayAudioProcessAck,
-                 togglePlayGCCNMFProcessQueue, togglePlayGCCNMFProcessAck,
-                 tdoaParamsGCCNMFProcessQueue, tdoaParamsGCCNMFProcessAck,
-                 toggleSeparationGCCNMFProcessQueue, toggleSeparationGCCNMFProcessAck):
+                 audioPlayingFlag, paramsNamespace, gccNMFParams, gccNMFDirtyParamNames):
         super(RealtimeGCCNMFInterfaceWindow, self).__init__()
         
         self.audioPath = audioPath
@@ -73,14 +70,10 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.outputSpectrogramHistory = outputSpectrogramHistory
         self.coefficientMaskHistories = coefficientMaskHistories
         
-        self.togglePlayAudioProcessQueue = togglePlayAudioProcessQueue
-        self.togglePlayAudioProcessAck = togglePlayAudioProcessAck
-        self.togglePlayGCCNMFProcessQueue = togglePlayGCCNMFProcessQueue
-        self.togglePlayGCCNMFProcessAck = togglePlayGCCNMFProcessAck
-        self.tdoaParamsGCCNMFProcessQueue = tdoaParamsGCCNMFProcessQueue
-        self.tdoaParamsGCCNMFProcessAck = tdoaParamsGCCNMFProcessAck
-        self.toggleSeparationGCCNMFProcessQueue = toggleSeparationGCCNMFProcessQueue
-        self.toggleSeparationGCCNMFProcessAck = toggleSeparationGCCNMFProcessAck
+        self.audioPlayingFlag = audioPlayingFlag
+        self.paramsNamespace = paramsNamespace
+        self.gccNMFParams = gccNMFParams
+        self.gccNMFDirtyParamNames = gccNMFDirtyParamNames
         
         self.playIconString = 'Play'
         self.pauseIconString = 'Pause'
@@ -231,20 +224,19 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         slidersLayout = QtGui.QVBoxLayout()
         self.maskFunctionControlslayout.addLayout(labelsLayout)
         self.maskFunctionControlslayout.addLayout(slidersLayout)
-        def addSlider(label, changedFunction, minimum, maximum, value):
+        def addSlider(label, minimum, maximum, value):
             labelsLayout.addWidget(QtGui.QLabel(label))
             slider = QtGui.QSlider(QtCore.Qt.Horizontal)
             slider.setMinimum(minimum)
             slider.setMaximum(maximum)
             slider.setValue(value)
-            slider.sliderReleased.connect(changedFunction)
             slidersLayout.addWidget(slider)
             return slider
         
-        self.targetModeWindowTDOASlider = addSlider('Center:', self.tdoaRegionChanged, 0, 100, 50)
-        self.targetModeWindowWidthSlider = addSlider('Width:', self.tdoaRegionChanged, 1, 101, 50)
-        self.targetModeWindowBetaSlider = addSlider('Shape:', self.tdoaRegionChanged, 0, 100, 50)
-        self.targetModeWindowNoiseFloorSlider = addSlider('Floor:', self.tdoaRegionChanged, 0, 100, 0)
+        self.targetModeWindowTDOASlider = addSlider('Center:', 0, 100, 50)
+        self.targetModeWindowWidthSlider = addSlider('Width:', 1, 101, 50)
+        self.targetModeWindowBetaSlider = addSlider('Shape:', 0, 100, 50)
+        self.targetModeWindowNoiseFloorSlider = addSlider('Floor:', 0, 100, 0)
         
     def initMaskFunctionPlot(self):
         self.gccPHATPlotWidget = self.createGraphicsLayoutWidget(self.backgroundColor, contentMargins=(6, 12, 18, 10))
@@ -259,13 +251,25 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         
         self.targetTDOARegion = pg.LinearRegionItem([self.targetTDOAIndex - self.targetTDOAEpsilon, self.targetTDOAIndex + self.targetTDOAEpsilon],
                                                     bounds=[0, self.numTDOAs - 1], movable=True)
-        self.targetTDOARegion.sigRegionChangeFinished.connect(self.tdoaRegionChanged)
+        #self.targetTDOARegion.sigRegionChangeFinished.connect(self.tdoaRegionChanged)
         
         self.targetWindowFunctionPen = pg.mkPen((0, 0, 204, 255), width=2)  # , style=QtCore.Qt.DashLine)
         self.targetWindowFunctionPlot = TargetWindowFunctionPlot(self.targetTDOARegion, self.targetModeWindowTDOASlider, self.targetModeWindowBetaSlider, self.targetModeWindowNoiseFloorSlider, self.targetModeWindowWidthSlider, self.numTDOAs, pen=self.targetWindowFunctionPen)
         self.gccPHATPlotItem.addItem(self.targetWindowFunctionPlot)
         self.targetWindowFunctionPlot.updateData()
         
+        def buildVariableChangedFunction(variableName, getValue):
+            def variableChanged():
+                logging.info('GCCNMFProcessor: %s changed, now: %s' % (variableName, getValue()))
+                setattr(self.gccNMFParams, variableName, getValue())
+                self.gccNMFDirtyParamNames.append(variableName)
+            return variableChanged
+        
+        self.targetModeWindowTDOASlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOAIndex', self.targetWindowFunctionPlot.getTDOA) )
+        self.targetModeWindowWidthSlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOAEpsilon', self.targetWindowFunctionPlot.getWindowWidth) )
+        self.targetModeWindowBetaSlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOABeta', self.targetWindowFunctionPlot.getBeta) )
+        self.targetModeWindowNoiseFloorSlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOANoiseFloor', self.targetWindowFunctionPlot.getNoiseFloor) )
+                                                                
     def initNMFControls(self):
         self.nmfControlsLayout = QtGui.QHBoxLayout()
         self.nmfControlsLayout.addStretch(1)
@@ -382,63 +386,21 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         
         if playing:
             QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            self.tdoaRegionChanged()
-            self.updateTogglePlayParamsGCCNMFProcess()
-            self.updateTogglePlayParamsAudioProcess(playing)
+            self.paramsNamespace.fileName = self.audioFilePaths[self.selectedFileIndex]
+            self.audioPlayingFlag.value = playing
             QtGui.QApplication.restoreOverrideCursor()
         else:
-            self.updateTogglePlayParamsAudioProcess(playing)
+            self.audioPlayingFlag.value = playing
 
         self.gccPHATPlotTimer.start(100) if playing else self.gccPHATPlotTimer.stop()
     
     def toggleSeparation(self):
         separationEnabled = self.toggleSeparationButton.text() == self.separationOffIconString
         logging.info('GCCNMFInterface: toggleSeparation(): now %s' % separationEnabled)
-        
         self.toggleSeparationButton.setText(self.separationOnIconString if separationEnabled else self.separationOffIconString)
-        self.queueParams(self.toggleSeparationGCCNMFProcessQueue,
-                         self.toggleSeparationGCCNMFProcessAck,
-                         {'separationEnabled': separationEnabled},
-                         'separationEnabledParameters')
         
-    def numHUpdatesChanged(self):
-        numHUpdates = int(self.numHUpdatesTextBox.text())
-        logging.info('GCCNMFInterface: setting numHUpdates: %d' % numHUpdates)
-        
-        self.queueParams(self.togglePlayGCCNMFProcessQueue,
-                         self.togglePlayGCCNMFProcessAck,
-                         {'numHUpdates': numHUpdates},
-                         'gccNMFProcessTogglePlayParameters')
-
-    def updateFileNameAudioProcess(self):
-        self.queueParams(self.togglePlayAudioProcessQueue,
-                         self.togglePlayAudioProcessAck,
-                         {'fileName': self.selectedFilePath},
-                         'audioProcessParameters')
-      
-    def updateTogglePlayParamsAudioProcess(self, playing):
-        self.queueParams(self.togglePlayAudioProcessQueue,
-                         self.togglePlayAudioProcessAck,
-                         {'fileName': self.audioFilePaths[self.selectedFileIndex],
-                          'start' if playing else 'stop': ''},
-                         'audioProcessParameters')
-
-    def updateTogglePlayParamsGCCNMFProcess(self):
-        self.queueParams(self.togglePlayGCCNMFProcessQueue,
-                         self.togglePlayGCCNMFProcessAck,
-                         {'numTDOAs': self.numTDOAs,
-                          'dictionarySize': int(self.dictionarySizeDropDown.currentText())},
-                          'gccNMFProcessTogglePlayParameters')
-        
-    def tdoaRegionChanged(self):
-        self.queueParams(self.tdoaParamsGCCNMFProcessQueue,
-                         self.tdoaParamsGCCNMFProcessAck,
-                         {'targetTDOAIndex': self.targetWindowFunctionPlot.getTDOA(),
-                          'targetTDOAEpsilon': self.targetWindowFunctionPlot.getWindowWidth(),  # targetTDOAEpsilon,
-                          'targetTDOABeta': self.targetWindowFunctionPlot.getBeta(),
-                          'targetTDOANoiseFloor': self.targetWindowFunctionPlot.getNoiseFloor()},
-                         'gccNMFProcessTDOAParameters (region)')
-        self.targetWindowFunctionPlot.updateData()
+        self.gccNMFParams.separationEnabled = separationEnabled
+        self.gccNMFDirtyParamNames.append('separationEnabled')
     
     def dictionarySizeChanged(self, changeGCCNMFProcessor=True):
         self.dictionarySize = self.dictionarySizes[self.dictionarySizeDropDown.currentIndex()]
@@ -454,28 +416,9 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.coefficientMaskViewBox.setYRange(0, self.coefficientMaskHistory.values.shape[0] - 1, padding=0)
         
         if changeGCCNMFProcessor:
-            self.queueParams(self.togglePlayGCCNMFProcessQueue,
-                             self.togglePlayGCCNMFProcessAck,
-                             {'dictionarySize': self.dictionarySize},
-                             'gccNMFProcessTogglePlayParameters')
-
-    def dictionaryTypeChanged(self):
-        dictionaryType = self.dictionaryTypes[self.dictionaryTypeDropDown.currentIndex()]
-        logging.info('GCCNMFInterface: setting dictionarySize: %s' % dictionaryType)
-        
-        self.queueParams(self.togglePlayGCCNMFProcessQueue,
-                         self.togglePlayGCCNMFProcessAck,
-                         {'dictionaryType': dictionaryType},
-                         'gccNMFProcessTogglePlayParameters')
-
-    def queueParams(self, queue, ack, params, label='params'):
-        ack.clear()
-        logging.debug('GCCNMFInterface: putting %s' % label)
-        queue.put(params)
-        logging.debug('GCCNMFInterface: put %s' % label)
-        ack.wait()
-        logging.debug('GCCNMFInterface: ack received')
-        
+            self.gccNMFParams.dictionarySize = self.dictionarySize
+            self.gccNMFDirtyParamNames.append('dictionarySize')    
+    
 def generalizedGaussian(x, alpha, beta, mu):
     return np.exp( - (np.abs(x-mu) / alpha) ** beta )
         
