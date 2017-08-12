@@ -181,6 +181,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
             labeledWidget.setLayout(widgetLayout)
             
             labelWidget = QtGui.QLabel(label)
+            labelWidget.setStyleSheet('font: 18pt;')
             labelWidget.setContentsMargins(0, 3, 0, 1)
             labelWidget.setAutoFillBackground(True)
             labelWidget.setAlignment(QtCore.Qt.AlignCenter)
@@ -213,7 +214,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         controlWidgetsLayout.addWidget(self.gccPHATPlotWidget)
         controlWidgetsLayout.addLayout(self.maskFunctionControlslayout)
         #self.addSeparator(controlWidgetsLayout)
-        controlWidgetsLayout.addLayout(self.nmfControlsLayout)
+        #controlWidgetsLayout.addLayout(self.nmfControlsLayout)
         #self.addSeparator(controlWidgetsLayout)
         controlWidgetsLayout.addWidget(self.uiConrolsWidget)
         
@@ -228,7 +229,10 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.maskFunctionControlslayout.addLayout(labelsLayout)
         self.maskFunctionControlslayout.addLayout(slidersLayout)
         def addSlider(label, minimum, maximum, value):
-            labelsLayout.addWidget(QtGui.QLabel(label))
+            labelWidget = QtGui.QLabel(label)
+            labelWidget.setStyleSheet('font:18pt;')
+            labelsLayout.addWidget(labelWidget)
+            
             slider = QtGui.QSlider(QtCore.Qt.Horizontal)
             slider.setMinimum(minimum)
             slider.setMaximum(maximum)
@@ -249,10 +253,10 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
             slidersLayout.addWidget(slider)
             return slider
 
-        self.targetModeWindowTDOASlider = addSlider('Center:', 0, 100, 50)
-        self.targetModeWindowWidthSlider = addSlider('Width:', 1, 101, 50)
-        self.targetModeWindowBetaSlider = addSlider('Shape:', 25, 100, 50)
-        self.targetModeWindowNoiseFloorSlider = addSlider('Floor:', 0, 100, 0)
+        self.targetModeWindowTDOASlider = addSlider('Center', 0, 100, 50)
+        self.targetModeWindowWidthSlider = addSlider('Width', 1, 101, 50)
+        self.targetModeWindowBetaSlider = addSlider('Shape', 25, 100, 50)
+        self.targetModeWindowNoiseFloorSlider = addSlider('Floor', 0, 100, 0)
         
     def initMaskFunctionPlot(self):
         self.gccPHATPlotWidget = self.createGraphicsLayoutWidget(self.backgroundColor, contentMargins=(6, 12, 18, 10))
@@ -294,21 +298,27 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
                                                                 
     def initNMFControls(self):
         self.nmfControlsLayout = QtGui.QHBoxLayout()
-        self.nmfControlsLayout.addStretch(1)
-        self.nmfControlsLayout.addWidget(QtGui.QLabel('Dictionary Size:'))
+        #self.nmfControlsLayout.addStretch(1)
+        labelWidget = QtGui.QLabel('NMF\nAtoms')
+        labelWidget.setStyleSheet('font:18pt;')
+        self.nmfControlsLayout.addWidget(labelWidget)
+        
         self.dictionarySizeDropDown = QtGui.QComboBox()
+        self.dictionarySizeDropDown.setStyleSheet("QComboBox {font-size: 16pt;}")
+        
         for dictionarySize in self.dictionarySizes:
             self.dictionarySizeDropDown.addItem( str(dictionarySize) )
         self.dictionarySizeDropDown.setMaximumWidth(75)
+        self.dictionarySizeDropDown.setMinimumHeight(50)
         self.dictionarySizeDropDown.setCurrentIndex(self.dictionarySizes.index(self.dictionarySize))
         self.dictionarySizeDropDown.currentIndexChanged.connect(self.dictionarySizeChanged)
         self.nmfControlsLayout.addWidget(self.dictionarySizeDropDown)
-        self.nmfControlsLayout.addStretch(1)
+        #self.nmfControlsLayout.addStretch(1)
         
-        self.nmfControlsLayout.addWidget(QtGui.QLabel('Num Updates:'))
-        self.numHUpdatesSpinBox = QtGui.QSpinBox()
-        self.nmfControlsLayout.addWidget(self.numHUpdatesSpinBox)
-        self.nmfControlsLayout.addStretch(1)
+        #self.nmfControlsLayout.addWidget(QtGui.QLabel('Num Updates:'))
+        #self.numHUpdatesSpinBox = QtGui.QSpinBox()
+        #self.nmfControlsLayout.addWidget(self.numHUpdatesSpinBox)
+        #self.nmfControlsLayout.addStretch(1)
     
     def initUIControls(self):
         self.uiConrolsWidget = QtGui.QWidget()
@@ -325,11 +335,13 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
                 button.clicked.connect(function)
             button.setStyleSheet('QPushButton {'
                                  'border-color: black;'
-                                 'border-width: 5px;}')
+                                 'border-width: 5px;'
+                                 'font: 18pt;}')
             button.setMinimumHeight(50)
             buttonBarWidgetLayout.addWidget(button)
             return button
-
+            
+        buttonBarWidgetLayout.addLayout(self.nmfControlsLayout)
         addButton('Info', function=self.toggleInfoViews)
         self.toggleSeparationButton = addButton(self.separationOnIconString, function=self.toggleSeparation)
         self.playPauseButton = addButton(self.playIconString, function=self.togglePlay)
