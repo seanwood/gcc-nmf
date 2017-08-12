@@ -29,11 +29,12 @@ import numpy as np
 from multiprocessing import Process
 from time import sleep
 import time as tm
+import os
 
 from gccNMF.wavfile import pcm2float, float2pcm
 
 class PyAudioStreamProcessor(Process):
-    def __init__(self, numChannels, sampleRate, windowSize, hopSize, blockSize, deviceIndex,
+    def __init__(self, numChannels, sampleRate, windowSize, hopSize, blockSize, deviceNameQuery,
                  playingFlag, paramsNamespace, inputFrames, outputFrames, processFramesEvent, processFramesDoneEvent, terminateEvent):
         super(PyAudioStreamProcessor, self).__init__()
 
@@ -50,7 +51,7 @@ class PyAudioStreamProcessor(Process):
         self.processFramesEvent = processFramesEvent
         self.processFramesDoneEvent = processFramesDoneEvent
         self.terminateEvent = terminateEvent
-        self.deviceIndex = deviceIndex
+        self.deviceNameQuery = deviceNameQuery
         
         self.numBlocksPerBuffer = 8
         
@@ -60,11 +61,14 @@ class PyAudioStreamProcessor(Process):
         self.fileName = None
         self.audioStream = None
         self.pyaudio = None
-        
+        self.deviceIndex = None
         self.fileNameChanged = False
  
     def run(self):
-        #os.nice(-20)
+        try:
+            os.nice(-20)
+        except OSError:
+            pass
         
         lastPrintTime = tm.time()
         
@@ -180,7 +184,23 @@ class PyAudioStreamProcessor(Process):
             self.underflowCounter = 0
         logging.info( 'Min/max/mean/std processing time: %f, %f, %f, %f. Num underflows: %d (min/max/meanTimeToProcess' % (minProcessingTime, maxProcessingTime, meanProcessingTime, stdProcessingTime, numUnderflows) )
         logging.info( 'min/max/mean/std time to process: %f, %f, %f, %f' % (minTimeToProcess, maxTimeToProcess, meanTimeToProcess, stdTimeToProcess) )
+
+    def getDeviceIndex(self, deviceQuery):
+        foundIndex = None
+        logging.info('Querying audio devices for %s:')
+        for deviceIndex in range(self.pyaudio.get_device_count()):
+            deviceName = self.pyaudio.get_device_info_by_index(deviceIndex)['name']
+            if deviceQuery in deviceName and foundIndex is None:
+                foundIndex = deviceIndex            
+                logging.info( ' *  %s' % deviceName )
+            else:
+                logging.info( '    %s' % deviceName )
+                
+        if not foundIndex:
+            logging.warn('Device not found %s' % self.deviceNameQuery)
             
+        return foundIndex
+        
     def resetAudioStream(self):
         import wave        
         import pyaudio
@@ -205,10 +225,13 @@ class PyAudioStreamProcessor(Process):
         waveFile.close()
         self.waveFile = wave.open(self.fileName, 'rb')
             
+        self.deviceIndex = self.getDeviceIndex(self.deviceNameQuery)
+            
         self.sampleIndex = 0
         self.audioStream = self.pyaudio.open(format=self.format,
                                              channels=self.numChannels,
                                              rate=self.sampleRate,
                                              frames_per_buffer=self.blockSize,
                                              output=True,
-                                             stream_callback=self.filePlayerCallback)
+                                             stream_callback=self.filePlayerCallback,
+                                             output_device_index=self.deviceIndex)

@@ -58,10 +58,14 @@ class GCCNMFProcess(Process):
         self.terminateEvent = terminateEvent
         
     def run(self):
-        #os.nice(-20)
+        try:
+            os.nice(-20)
+        except OSError:
+            pass
+
         while True:
-            if self.shouldTerminate():
-                return
+            #if self.shouldTerminate():
+            #    return
             
             #logging.info('GCCNMFProcessor: Waiting for processFramesEvent')
             self.processFramesEvent.wait()
@@ -132,7 +136,7 @@ class GCCNMFProcessor(object):
         self.outputSpectrogramHistory = outputSpectrogramHistory
         self.coefficientMaskHistories = coefficientMaskHistories
         
-        self.windowFunction = np.sqrt( np.hamming(self.windowSize).astype(np.float32) )[:, np.newaxis]
+        self.windowFunction = np.sqrt( np.hanning(self.windowSize).astype(np.float32) )[:, np.newaxis]
         self.synthesisWindowFunction = self.windowFunction
         
         self.numTDOAs = numTDOAs

@@ -82,7 +82,7 @@ class RealtimeGCCNMF(object):
             self.coefficientMaskHistories[size] = SharedMemoryCircularBuffer( (size, params.numSpectrogramHistory) )
         
     def initProcesses(self, params):
-        self.audioProcess = AudioStreamProcessor(params.numChannels, params.sampleRate, params.windowSize, params.hopSize, params.blockSize, params.deviceIndex,
+        self.audioProcess = AudioStreamProcessor(params.numChannels, params.sampleRate, params.windowSize, params.hopSize, params.blockSize, params.deviceNameQuery,
                                                  self.audioPlayingFlag, self.paramsNamespace, self.inputFrames, self.outputFrames, self.processFramesEvent, self.processFramesDoneEvent, self.terminateEvent)
         self.oladProcessor = OverlapAddProcessor(params.numChannels, params.windowSize, params.hopSize, params.blockSize, params.windowsPerBlock, self.inputFrames, self.outputFrames)
         self.gccNMFProcess = GCCNMFProcess(self.oladProcessor, params.numTDOAs, params.sampleRate, params.windowSize, params.windowsPerBlock, params.dictionariesW, params.dictionaryType, params.dictionarySize, params.numHUpdates, params.microphoneSeparationInMetres,
@@ -108,8 +108,8 @@ class RealtimeGCCNMF(object):
             self.audioProcess.join()
             logging.info('Audio process joined')
             
-            self.gccNMFProcess.join()
-            logging.info('GCCNMF process joined')
+            self.gccNMFProcess.terminate()
+            logging.info('GCCNMF process terminated')
             
         finally:
             self.audioProcess.terminate()

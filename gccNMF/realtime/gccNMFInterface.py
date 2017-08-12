@@ -35,7 +35,8 @@ import pyqtgraph as pg
 
 from gccNMF.realtime.gccNMFProcessor import TARGET_MODE_BOXCAR, TARGET_MODE_MULTIPLE, TARGET_MODE_WINDOW_FUNCTION
 
-BUTTON_WIDTH = 50
+CONTINUOUS_SLIDERS = True
+INFO_HIDDEN_ON_STARTUP = True
         
 class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
     def __init__(self, audioPath, numTDOAs, gccPHATNLAlpha, gccPHATNLEnabled, dictionariesW, dictionarySize, dictionarySizes, dictionaryType, numHUpdates,
@@ -96,6 +97,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         
         #self.show()
         self.showMaximized()
+        #self.showFullScreen()
     
     def keyPressEvent(self, event):
         key = event.key()
@@ -196,9 +198,10 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         addWidgetWithLabel(self.gccPHATHistoryWidget, 'GCC PHAT Angular Spectrogram', 0, 3)
         addWidgetWithLabel(self.dictionaryWidget, 'NMF Dictionary', 1, 2)
         addWidgetWithLabel(self.coefficientMaskWidget, 'NMF Dictionary Mask', 1, 3)
-        #for widget in self.infoLabelWidgets:
-        #    widget.hide()
-        #map(lambda widget: widget.hide(), self.infoLabelWidgets)
+        if INFO_HIDDEN_ON_STARTUP:
+            #map(lambda widget: widget.hide(), self.infoLabelWidgets)
+            for widget in self.infoLabelWidgets:
+                widget.hide()
         
     def initControlWidgets(self):
         self.initMaskFunctionControls()
@@ -209,9 +212,9 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         controlWidgetsLayout = QtGui.QVBoxLayout()
         controlWidgetsLayout.addWidget(self.gccPHATPlotWidget)
         controlWidgetsLayout.addLayout(self.maskFunctionControlslayout)
-        self.addSeparator(controlWidgetsLayout)
+        #self.addSeparator(controlWidgetsLayout)
         controlWidgetsLayout.addLayout(self.nmfControlsLayout)
-        self.addSeparator(controlWidgetsLayout)
+        #self.addSeparator(controlWidgetsLayout)
         controlWidgetsLayout.addWidget(self.uiConrolsWidget)
         
         self.controlsWidget = QtGui.QWidget()
@@ -230,12 +233,25 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
             slider.setMinimum(minimum)
             slider.setMaximum(maximum)
             slider.setValue(value)
+            slider.setStyleSheet("QSlider::groove:horizontal { "
+                      "border: 1px solid #999999; "
+                      "height: 40px; "
+                      "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #B1B1B1, stop:1 #c4c4c4); "
+                      "margin: 2px 0; "
+                      "} "
+                      "QSlider::handle:horizontal { "
+                      "background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #b4b4b4, stop:1 #8f8f8f); "
+                      "border: 1px solid #5c5c5c; "
+                      "width: 50px; "
+                      "margin: -2px 0px; "
+                      "} ")
+            slider.setMinimumSize(50, 50)
             slidersLayout.addWidget(slider)
             return slider
-        
+
         self.targetModeWindowTDOASlider = addSlider('Center:', 0, 100, 50)
         self.targetModeWindowWidthSlider = addSlider('Width:', 1, 101, 50)
-        self.targetModeWindowBetaSlider = addSlider('Shape:', 0, 100, 50)
+        self.targetModeWindowBetaSlider = addSlider('Shape:', 25, 100, 50)
         self.targetModeWindowNoiseFloorSlider = addSlider('Floor:', 0, 100, 0)
         
     def initMaskFunctionPlot(self):
@@ -265,10 +281,16 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
                 self.gccNMFDirtyParamNames.append(variableName)
             return variableChanged
         
-        self.targetModeWindowTDOASlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOAIndex', self.targetWindowFunctionPlot.getTDOA) )
-        self.targetModeWindowWidthSlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOAEpsilon', self.targetWindowFunctionPlot.getWindowWidth) )
-        self.targetModeWindowBetaSlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOABeta', self.targetWindowFunctionPlot.getBeta) )
-        self.targetModeWindowNoiseFloorSlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOANoiseFloor', self.targetWindowFunctionPlot.getNoiseFloor) )
+        if CONTINUOUS_SLIDERS:
+            self.targetModeWindowTDOASlider.valueChanged.connect( buildVariableChangedFunction('targetTDOAIndex', self.targetWindowFunctionPlot.getTDOA) )
+            self.targetModeWindowWidthSlider.valueChanged.connect( buildVariableChangedFunction('targetTDOAEpsilon', self.targetWindowFunctionPlot.getWindowWidth) )
+            self.targetModeWindowBetaSlider.valueChanged.connect( buildVariableChangedFunction('targetTDOABeta', self.targetWindowFunctionPlot.getBeta) )
+            self.targetModeWindowNoiseFloorSlider.valueChanged.connect( buildVariableChangedFunction('targetTDOANoiseFloor', self.targetWindowFunctionPlot.getNoiseFloor) )
+        else:
+            self.targetModeWindowTDOASlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOAIndex', self.targetWindowFunctionPlot.getTDOA) )
+            self.targetModeWindowWidthSlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOAEpsilon', self.targetWindowFunctionPlot.getWindowWidth) )
+            self.targetModeWindowBetaSlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOABeta', self.targetWindowFunctionPlot.getBeta) )
+            self.targetModeWindowNoiseFloorSlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOANoiseFloor', self.targetWindowFunctionPlot.getNoiseFloor) )
                                                                 
     def initNMFControls(self):
         self.nmfControlsLayout = QtGui.QHBoxLayout()
@@ -304,6 +326,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
             button.setStyleSheet('QPushButton {'
                                  'border-color: black;'
                                  'border-width: 5px;}')
+            button.setMinimumHeight(50)
             buttonBarWidgetLayout.addWidget(button)
             return button
 
@@ -392,7 +415,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         else:
             self.audioPlayingFlag.value = playing
 
-        self.gccPHATPlotTimer.start(100) if playing else self.gccPHATPlotTimer.stop()
+        self.gccPHATPlotTimer.start(25) if playing else self.gccPHATPlotTimer.stop()
     
     def toggleSeparation(self):
         separationEnabled = self.toggleSeparationButton.text() == self.separationOffIconString
@@ -437,7 +460,8 @@ class TargetWindowFunctionPlot(pg.PlotDataItem):
         self.targetModeWindowNoiseFloorSlider.valueChanged.connect(self.updateData)
         self.targetModeWindowWidthSlider.valueChanged.connect(self.updateData)
         self.numTDOAs = numTDOAs
-        self.tdoas = np.arange(self.numTDOAs).astype(np.float32)
+        #self.tdoas = np.arange(self.numTDOAs*5).astype(np.float32)
+        self.tdoas = np.linspace(0, self.numTDOAs, self.numTDOAs*5).astype(np.float32)
         
     def updateData(self):
         mu = self.getTDOA()

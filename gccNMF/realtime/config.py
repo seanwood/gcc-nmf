@@ -40,7 +40,7 @@ INT_OPTIONS = ['numTDOAs', 'numTDOAHistory', 'numSpectrogramHistory', 'numChanne
                'windowSize', 'hopSize', 'blockSize', 'dictionarySize', 'numHUpdates']
 FLOAT_OPTIONS = ['gccPHATNLAlpha', 'microphoneSeparationInMetres']
 BOOL_OPTIONS = ['gccPHATNLEnabled']
-STRING_OPTIONS = ['dictionaryType', 'audioPath']
+STRING_OPTIONS = ['dictionaryType', 'audioPath', 'deviceNameQuery']
 
 def getDefaultConfig():
     configParser = configparser.ConfigParser(allow_no_value=True)
@@ -58,7 +58,7 @@ def getDefaultConfig():
     
     config['Audio'] = {'numChannels': '2',
                        'sampleRate': '16000',
-                       'deviceIndex': 'None'}
+                       'deviceNameQuery': 'iMic'}
     
     config['STFT'] = {'windowSize': '1024',
                       'hopSize': '512',
