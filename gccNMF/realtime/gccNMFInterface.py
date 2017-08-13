@@ -172,6 +172,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(1)
         
+        fontSize = self.getControlFontSize()
         self.infoLabelWidgets = []
         def addWidgetWithLabel(widget, label, fromRow, fromColumn, rowSpan=1, columnSpan=1):
             labeledWidget = QtGui.QWidget()
@@ -181,7 +182,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
             labeledWidget.setLayout(widgetLayout)
             
             labelWidget = QtGui.QLabel(label)
-            labelWidget.setStyleSheet('font: 18pt;')
+            labelWidget.setStyleSheet('font: %dpt;' % fontSize)
             labelWidget.setContentsMargins(0, 3, 0, 1)
             labelWidget.setAutoFillBackground(True)
             labelWidget.setAlignment(QtCore.Qt.AlignCenter)
@@ -228,9 +229,12 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         slidersLayout = QtGui.QVBoxLayout()
         self.maskFunctionControlslayout.addLayout(labelsLayout)
         self.maskFunctionControlslayout.addLayout(slidersLayout)
+        
+        sliderHeight = self.getControlHeight()
+        fontSize = self.getControlFontSize()
         def addSlider(label, minimum, maximum, value):
             labelWidget = QtGui.QLabel(label)
-            labelWidget.setStyleSheet('font:18pt;')
+            labelWidget.setStyleSheet('font:%dpt;' % fontSize)
             labelsLayout.addWidget(labelWidget)
             
             slider = QtGui.QSlider(QtCore.Qt.Horizontal)
@@ -239,7 +243,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
             slider.setValue(value)
             slider.setStyleSheet("QSlider::groove:horizontal { "
                       "border: 1px solid #999999; "
-                      "height: 40px; "
+                      "height: %dpx; "
                       "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #B1B1B1, stop:1 #c4c4c4); "
                       "margin: 2px 0; "
                       "} "
@@ -248,8 +252,8 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
                       "border: 1px solid #5c5c5c; "
                       "width: 50px; "
                       "margin: -2px 0px; "
-                      "} ")
-            slider.setMinimumSize(50, 50)
+                      "} " % sliderHeight )
+            slider.setMinimumSize(50, sliderHeight+5)
             slidersLayout.addWidget(slider)
             return slider
 
@@ -295,21 +299,24 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
             self.targetModeWindowWidthSlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOAEpsilon', self.targetWindowFunctionPlot.getWindowWidth) )
             self.targetModeWindowBetaSlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOABeta', self.targetWindowFunctionPlot.getBeta) )
             self.targetModeWindowNoiseFloorSlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOANoiseFloor', self.targetWindowFunctionPlot.getNoiseFloor) )
-                                                                
+
     def initNMFControls(self):
+        controlHeight = self.getControlHeight()
+        fontSize = self.getControlFontSize()
+        
         self.nmfControlsLayout = QtGui.QHBoxLayout()
         #self.nmfControlsLayout.addStretch(1)
         labelWidget = QtGui.QLabel('NMF\nAtoms')
-        labelWidget.setStyleSheet('font:18pt;')
+        labelWidget.setStyleSheet('font:%dpt;' % fontSize)
         self.nmfControlsLayout.addWidget(labelWidget)
         
         self.dictionarySizeDropDown = QtGui.QComboBox()
-        self.dictionarySizeDropDown.setStyleSheet("QComboBox {font-size: 16pt;}")
+        self.dictionarySizeDropDown.setStyleSheet("QComboBox {font-size: %dpt;}" % fontSize)
         
         for dictionarySize in self.dictionarySizes:
             self.dictionarySizeDropDown.addItem( str(dictionarySize) )
         self.dictionarySizeDropDown.setMaximumWidth(75)
-        self.dictionarySizeDropDown.setMinimumHeight(50)
+        self.dictionarySizeDropDown.setMinimumHeight(controlHeight + 2)
         self.dictionarySizeDropDown.setCurrentIndex(self.dictionarySizes.index(self.dictionarySize))
         self.dictionarySizeDropDown.currentIndexChanged.connect(self.dictionarySizeChanged)
         self.nmfControlsLayout.addWidget(self.dictionarySizeDropDown)
@@ -327,6 +334,8 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         buttonBarWidgetLayout.setSpacing(0)
         self.uiConrolsWidget.setLayout(buttonBarWidgetLayout)
         
+        buttonHeight = self.getControlHeight()
+        fontSize = self.getControlFontSize()
         def addButton(label, widget=None, function=None):
             button = QtGui.QPushButton(label)
             if function is None:
@@ -336,8 +345,8 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
             button.setStyleSheet('QPushButton {'
                                  'border-color: black;'
                                  'border-width: 5px;'
-                                 'font: 18pt;}')
-            button.setMinimumHeight(50)
+                                 'font: %dpt;}' % fontSize)
+            button.setMinimumHeight(buttonHeight)
             buttonBarWidgetLayout.addWidget(button)
             return button
             
@@ -377,6 +386,18 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.dictionaryImageItem = pg.ImageItem()  # 1 - visualizedDictionary)#, border=self.borderColor)
         self.dictionaryViewBox.addItem(self.dictionaryImageItem)
         self.dictionarySizeChanged(False)
+
+    def getControlHeight(self):
+        app = QtGui.QApplication.instance()
+        screenHeight = app.desktop().screenGeometry().height()
+        controlHeight = int(screenHeight * 0.05)
+        return controlHeight
+
+    def getControlFontSize(self):
+        app = QtGui.QApplication.instance()
+        screenHeight = app.desktop().screenGeometry().height()
+        fontSize = int(screenHeight * 0.0225)
+        return fontSize
 
     def addSeparator(self, layout, lineStyle=QtGui.QFrame.HLine):
         separator = QtGui.QFrame()
