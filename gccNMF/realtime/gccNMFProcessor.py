@@ -29,6 +29,7 @@ from time import sleep, time
 import numpy as np
 from numpy.fft import rfft
 from multiprocessing import Process
+from threading import Thread
 import os
 
 from gccNMF.defs import SPEED_OF_SOUND_IN_METRES_PER_SECOND
@@ -73,11 +74,11 @@ class GCCNMFProcess(Process):
             self.processFramesEvent.clear()
             
             try:
-                if len(self.gccNMFDirtyParamNames) != 0:
-                    #startTime = time()
-                    self.updateGCCNMFParams()
-                    #elapsedTime = time() - startTime
-                    #logging.info('GCCNMFProcessor: Updating params toooook: %.10f' % elapsedTime)
+                if not self.gccNMFProcessor.updating and len(self.gccNMFDirtyParamNames) != 0:
+                    logging.info('GCCNMFProcessor: Starting update params thread')
+                    self.gccNMFProcessor.updating = True
+                    self.updatingThread = Thread(target=self.updateGCCNMFParams)
+                    self.updatingThread.start()
             except Exception as e:
                 logging.info('GCCNMFProcessor: Failed to update params')
                 logging.info(e)
@@ -94,10 +95,15 @@ class GCCNMFProcess(Process):
         return False
     
     def updateGCCNMFParams(self):
+        #startTime = time()
+        #logging.info('GCCNMFProcessor: Update params thread started')
+        
+        dirtyParamNames = list(self.gccNMFDirtyParamNames)
+        del self.gccNMFDirtyParamNames[:]
         params = self.gccNMFParams
         
         resetRequired = False
-        for parameterName in self.gccNMFDirtyParamNames:
+        for parameterName in dirtyParamNames:
             parameterValue = getattr(params, parameterName)
             currentParam = getattr(self.gccNMFProcessor, parameterName)
             if issubclass(type(currentParam), GCCNMFProcess.SharedVariable):
@@ -114,9 +120,11 @@ class GCCNMFProcess(Process):
                     setattr(self.gccNMFProcessor, parameterName, parameterValue)
                     resetRequired |= parameterName in GCC_NMF_PARAMETERS_REQUIRING_RESET
 
-        del self.gccNMFDirtyParamNames[:]
         if resetRequired:
             self.gccNMFProcessor.reset()
+        self.gccNMFProcessor.updating = False
+        #elapsedTime = time() - startTime
+        #logging.info('GCCNMFProcessor: Updating params took: %.10f' % elapsedTime)
     
 class GCCNMFProcessor(object):
     def __init__(self, numTDOAs, sampleRate, windowSize, numTimePerChunk, dictionariesW, dictionaryType, dictionarySize, numHUpdates, microphoneSeparationInMetres,
@@ -149,9 +157,14 @@ class GCCNMFProcessor(object):
         self.targetTDOABeta = shared( np.float32(1.0) )
         self.targetTDOANoiseFloor = shared( np.float32(0.0) )
         
+        self.updating = False
+        
         self.reset()
         
     def processFrames(self, windowedSamples):
+        if self.updating:
+            return np.zeros_like(windowedSamples)
+        
         self.complexMixtureSpectrogram[:] = rfft(windowedSamples * self.windowFunction, axis=1).astype(np.complex64)
         self.spectrogram.set_value(self.complexMixtureSpectrogram)
         #self.spectrogram.set_value( rfft(windowedSamples * self.windowFunction, axis=1).astype(np.complex64) )
@@ -165,6 +178,8 @@ class GCCNMFProcessor(object):
                 self.coefficientMaskHistories[self.dictionarySize].set(1-coefficientMask)
         else:
             outputSpectrogram = self.complexMixtureSpectrogram.copy()
+            if self.coefficientMaskHistories:
+                self.coefficientMaskHistories[self.dictionarySize].set( np.zeros( (self.dictionarySize, windowedSamples.shape[-1]), np.float32) )
         
         if self.inputSpectrogramHistory:
             self.inputSpectrogramHistory.set( -np.mean(np.abs(self.complexMixtureSpectrogram), axis=0) ** (1/3.0) )
