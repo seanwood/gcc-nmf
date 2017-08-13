@@ -97,7 +97,7 @@ class RealtimeGCCNMF(object):
             from gccNMF.realtime.gccNMFInterface import RealtimeGCCNMFInterfaceWindow
             
             app = QtGui.QApplication([])
-            gccNMFInterfaceWindow = RealtimeGCCNMFInterfaceWindow(params.audioPath, params.numTDOAs, params.gccPHATNLAlpha, params.gccPHATNLEnabled, params.dictionariesW, params.dictionarySize,
+            gccNMFInterfaceWindow = RealtimeGCCNMFInterfaceWindow(params, params.audioPath, params.numTDOAs, params.gccPHATNLAlpha, params.gccPHATNLEnabled, params.dictionariesW, params.dictionarySize,
                                                                   params.dictionarySizes, params.dictionaryType, params.numHUpdates,
                                                                   self.gccPHATHistory, self.inputSpectrogramHistory, self.outputSpectrogramHistory, self.coefficientMaskHistories,
                                                                   self.audioPlayingFlag, self.paramsNamespace, self.gccNMFParams, self.gccNMFDirtyParamNames)

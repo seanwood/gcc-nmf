@@ -37,10 +37,11 @@ from gccNMF.defs import DEFAULT_AUDIO_FILE, DEFAULT_CONFIG_FILE
 from gccNMF.realtime.gccNMFPretraining import getDictionariesW
 
 INT_OPTIONS = ['numTDOAs', 'numTDOAHistory', 'numSpectrogramHistory', 'numChannels',
-               'windowSize', 'hopSize', 'blockSize', 'dictionarySize', 'numHUpdates']
+               'windowSize', 'hopSize', 'blockSize', 'dictionarySize', 'numHUpdates',
+               'fullscreenDelay']
 FLOAT_OPTIONS = ['gccPHATNLAlpha', 'microphoneSeparationInMetres']
 BOOL_OPTIONS = ['gccPHATNLEnabled']
-STRING_OPTIONS = ['dictionaryType', 'audioPath', 'deviceNameQuery']
+STRING_OPTIONS = ['dictionaryType', 'audioPath', 'deviceNameQuery', 'startupWindowMode']
 
 def getDefaultConfig():
     configParser = configparser.ConfigParser(allow_no_value=True)
@@ -68,6 +69,9 @@ def getDefaultConfig():
                      'dictionarySizes': '[64, 128, 256, 512, 1024]',
                      'dictionaryType': 'Pretrained',
                      'numHUpdates': '0'}
+    config['UI'] = {'startupWindowMode': 'fullscreen',
+                    'linuxFullscreenDelay': '1000'}
+    
     try:
         for key, value in config.items():
             configParser[key] = value

@@ -28,6 +28,7 @@ import logging
 from os import listdir
 from os.path import join, isdir
 from collections import OrderedDict
+import platform
 
 import numpy as np
 from pyqtgraph.Qt import QtGui, QtCore
@@ -39,11 +40,12 @@ CONTINUOUS_SLIDERS = True
 INFO_HIDDEN_ON_STARTUP = True
         
 class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
-    def __init__(self, audioPath, numTDOAs, gccPHATNLAlpha, gccPHATNLEnabled, dictionariesW, dictionarySize, dictionarySizes, dictionaryType, numHUpdates,
+    def __init__(self, params, audioPath, numTDOAs, gccPHATNLAlpha, gccPHATNLEnabled, dictionariesW, dictionarySize, dictionarySizes, dictionaryType, numHUpdates,
                  gccPHATHistory, inputSpectrogramHistory, outputSpectrogramHistory, coefficientMaskHistories,
                  audioPlayingFlag, paramsNamespace, gccNMFParams, gccNMFDirtyParamNames):
         super(RealtimeGCCNMFInterfaceWindow, self).__init__()
         
+        self.params = params
         self.audioPath = audioPath
         logging.info('Loading interface with audio path: %s' % self.audioPath)
         self.initAudioFiles()
@@ -95,10 +97,21 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.initVisualizationWidgets()
         self.initWindowLayout()
         
-        #self.show()
-        self.showMaximized()
-        #self.showFullScreen()
-    
+        self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        
+        if params.startupWindowMode == 'normal':
+            self.show()
+        elif params.startupWindowMode == 'maximized':
+            self.showMaximized()
+        elif params.startupWindowMode == 'fullscreen':
+            delay = params.linuxFullscreenDelay
+            if platform.system().lower() == 'linux' and delay != 0:
+                self.show()
+                QtCore.QTimer.singleShot(delay, self.showFullScreen)
+            else:
+                self.showFullScreen()
+                self.raise_()
+
     def keyPressEvent(self, event):
         key = event.key()
         
