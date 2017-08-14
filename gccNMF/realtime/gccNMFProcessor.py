@@ -150,6 +150,7 @@ class GCCNMFProcessor(object):
         self.numTDOAs = numTDOAs
         self.separationEnabled = True
         self.targetMode = TARGET_MODE_WINDOW_FUNCTION
+        self.audioPlaybackGain = 1.0
         
         from theano import shared
         self.targetTDOAIndex = shared( np.float32(10.0) )
@@ -188,7 +189,7 @@ class GCCNMFProcessor(object):
         if self.outputSpectrogramHistory:
             self.outputSpectrogramHistory.set( -np.nanmean(np.abs(outputSpectrogram), axis=0) ** (1/3.0) )
         
-        return np.fft.irfft(outputSpectrogram, axis=1) * self.synthesisWindowFunction
+        return np.fft.irfft(outputSpectrogram, axis=1) * self.synthesisWindowFunction * self.audioPlaybackGain
         
     def reset(self):
         logging.info('GCCNMFProcessor: resetting...')

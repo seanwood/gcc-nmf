@@ -281,6 +281,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.targetModeWindowWidthSlider = addSlider('Width', 1, 101, 50)
         self.targetModeWindowBetaSlider = addSlider('Shape', 25, 100, 50)
         self.targetModeWindowNoiseFloorSlider = addSlider('Floor', 0, 100, 0)
+        self.audioPlaybackGainSlider = addSlider('Volume', 0, 100, 100)
         
     def initMaskFunctionPlot(self):
         self.gccPHATPlotWidget = self.createGraphicsLayoutWidget(self.backgroundColor, contentMargins=(0, 0, 0, 0))
@@ -314,11 +315,13 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
             self.targetModeWindowWidthSlider.valueChanged.connect( buildVariableChangedFunction('targetTDOAEpsilon', self.targetWindowFunctionPlot.getWindowWidth) )
             self.targetModeWindowBetaSlider.valueChanged.connect( buildVariableChangedFunction('targetTDOABeta', self.targetWindowFunctionPlot.getBeta) )
             self.targetModeWindowNoiseFloorSlider.valueChanged.connect( buildVariableChangedFunction('targetTDOANoiseFloor', self.targetWindowFunctionPlot.getNoiseFloor) )
+            self.audioPlaybackGainSlider.valueChanged.connect( buildVariableChangedFunction('audioPlaybackGain', self.getAudioPlaybackGain) )
         else:
             self.targetModeWindowTDOASlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOAIndex', self.targetWindowFunctionPlot.getTDOA) )
             self.targetModeWindowWidthSlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOAEpsilon', self.targetWindowFunctionPlot.getWindowWidth) )
             self.targetModeWindowBetaSlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOABeta', self.targetWindowFunctionPlot.getBeta) )
             self.targetModeWindowNoiseFloorSlider.sliderReleased.connect( buildVariableChangedFunction('targetTDOANoiseFloor', self.targetWindowFunctionPlot.getNoiseFloor) )
+            self.audioPlaybackGainSlider.sliderReleased.connect( buildVariableChangedFunction('audioPlaybackGain', self.getAudioPlaybackGain) )
 
     def initNMFControls(self):
         controlHeight = self.getControlHeight()
@@ -431,6 +434,10 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.dictionaryImageItem = pg.ImageItem()  # 1 - visualizedDictionary)#, border=self.borderColor)
         self.dictionaryViewBox.addItem(self.dictionaryImageItem)
         self.dictionarySizeChanged(False)
+
+    def getAudioPlaybackGain(self):
+        value = self.audioPlaybackGainSlider.value() / 100.0
+        return value
 
     def getControlHeight(self):
         app = QtGui.QApplication.instance()
