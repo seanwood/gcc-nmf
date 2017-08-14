@@ -49,6 +49,7 @@ SEPARATION_ON_ICON_PATH = join(RESOURCES_DIR, 'separation-on.png')
 SEPARATION_OFF_ICON_PATH = join(RESOURCES_DIR, 'separation-off.png')
 INFO_ON_ICON_PATH = join(RESOURCES_DIR, 'info-on.png')
 INFO_OFF_ICON_PATH = join(RESOURCES_DIR, 'info-off.png')
+VOLUME_ICON_PATH = join(RESOURCES_DIR, 'volume-icon.png')
         
 class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
     def __init__(self, params, audioPath, numTDOAs, gccPHATNLAlpha, gccPHATNLEnabled, dictionariesW, dictionarySize, dictionarySizes, dictionaryType, numHUpdates,
@@ -252,11 +253,13 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         
         sliderHeight = self.getControlHeight()
         fontSize = self.getControlFontSize()
-        def addSlider(label, minimum, maximum, value):
+        def addSlider(label, minimum, maximum, value, iconPath=None):
             labelWidget = QtGui.QLabel(label)
             labelWidget.setStyleSheet('font:%dpt;' % fontSize)
+            if iconPath:
+                labelWidget.setPixmap( QtGui.QPixmap(iconPath) )
             labelsLayout.addWidget(labelWidget)
-            
+
             slider = QtGui.QSlider(QtCore.Qt.Horizontal)
             slider.setMinimum(minimum)
             slider.setMaximum(maximum)
@@ -281,7 +284,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.targetModeWindowWidthSlider = addSlider('Width', 1, 101, 50)
         self.targetModeWindowBetaSlider = addSlider('Shape', 25, 100, 50)
         self.targetModeWindowNoiseFloorSlider = addSlider('Floor', 0, 100, 0)
-        self.audioPlaybackGainSlider = addSlider('Volume', 0, 100, 100)
+        self.audioPlaybackGainSlider = addSlider('', 0, 100, 100, iconPath=VOLUME_ICON_PATH)
         
     def initMaskFunctionPlot(self):
         self.gccPHATPlotWidget = self.createGraphicsLayoutWidget(self.backgroundColor, contentMargins=(0, 0, 0, 0))
