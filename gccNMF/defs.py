@@ -35,7 +35,11 @@ def getVariableWithDefault(environmentVariable, defaultValue):
 
 ROOT_DIR = abspath( join( __file__, '../..' ) )
 DATA_DIR = getVariableWithDefault('GCCNMF_DATA_DIR', join(ROOT_DIR, 'data'))
+DEFAULT_AUDIO_DIR = join(DATA_DIR, 'demoAudioFiles')
 DEFAULT_AUDIO_FILE = join(DATA_DIR, 'dev_Sq1_Co_A_mix.wav')
 DEFAULT_CONFIG_FILE = join(ROOT_DIR, 'gccNMF.cfg')
 
 SPEED_OF_SOUND_IN_METRES_PER_SECOND = 340.29
+
+MICROPHONE_SEPARATIONS = {'dev_Sq1_Co_A_mix.wav': 0.1,
+                          'dev1_female3_liverec_130ms_1m_mix.wav': 1.0}

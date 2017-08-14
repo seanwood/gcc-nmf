@@ -33,7 +33,7 @@ try:
 except ImportError:
     import ConfigParser as configparser # Python 2.x
     
-from gccNMF.defs import DEFAULT_AUDIO_FILE, DEFAULT_CONFIG_FILE
+from gccNMF.defs import DEFAULT_AUDIO_FILE, DEFAULT_AUDIO_DIR, DEFAULT_CONFIG_FILE
 from gccNMF.realtime.gccNMFPretraining import getDictionariesW
 
 INT_OPTIONS = ['numTDOAs', 'numTDOAHistory', 'numSpectrogramHistory', 'numChannels',
@@ -61,7 +61,8 @@ def getDefaultConfig():
                        'sampleRate': '16000',
                        'normalizeInput': 'True',
                        'normalizeInputMaxValue': '0.99',
-                       'deviceNameQuery': 'None'}
+                       'deviceNameQuery': 'None',
+                       'audioPath': DEFAULT_AUDIO_DIR}
     
     config['STFT'] = {'windowSize': '1024',
                       'hopSize': '512',
@@ -108,7 +109,7 @@ def getDictFromConfig(config):
 def getGCCNMFConfig(configPath):
     raise ValueError('configPath is None')
 
-def getGCCNMFConfigParams(audioPath=DEFAULT_AUDIO_FILE, configPath=DEFAULT_CONFIG_FILE):
+def getGCCNMFConfigParams(audioPath=DEFAULT_AUDIO_DIR, configPath=DEFAULT_CONFIG_FILE):
     try:
         config = getGCCNMFConfig(configPath)
     except:
@@ -125,7 +126,7 @@ def getGCCNMFConfigParams(audioPath=DEFAULT_AUDIO_FILE, configPath=DEFAULT_CONFI
 
 def parseArguments():
     parser = argparse.ArgumentParser(description='Real-time GCC-NMF Speech Enhancement')
-    parser.add_argument('-i','--input', help='input wav file path', default=DEFAULT_AUDIO_FILE, required=False)
+    parser.add_argument('-i','--input', help='input wav file path', default=DEFAULT_AUDIO_DIR, required=False)
     parser.add_argument('-c','--config', help='config file path', default=DEFAULT_CONFIG_FILE, required=False)
     parser.add_argument('--no-gui', help='no user interface mode', action='store_true')
     return parser.parse_args()

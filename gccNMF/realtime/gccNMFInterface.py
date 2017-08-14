@@ -26,7 +26,7 @@ SOFTWARE.
 
 import logging
 from os import listdir
-from os.path import join, isdir, abspath
+from os.path import join, isdir, abspath, basename
 from collections import OrderedDict
 import platform
 
@@ -35,6 +35,7 @@ from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph as pg
 
 from gccNMF.realtime.gccNMFProcessor import TARGET_MODE_BOXCAR, TARGET_MODE_MULTIPLE, TARGET_MODE_WINDOW_FUNCTION
+from gccNMF.defs import MICROPHONE_SEPARATIONS
 
 CONTINUOUS_SLIDERS = True
 INFO_HIDDEN_ON_STARTUP = True
@@ -58,9 +59,8 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         super(RealtimeGCCNMFInterfaceWindow, self).__init__()
         
         self.params = params
-        self.audioPath = audioPath
-        logging.info('Loading interface with audio path: %s' % self.audioPath)
-        self.initAudioFiles()
+        logging.info('Loading interface with audio path: %s' % audioPath)
+        self.initAudioFiles(audioPath)
         
         self.numTDOAs = numTDOAs
         self.tdoaIndexes = np.arange(numTDOAs)
@@ -148,6 +148,10 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
             self.gccPHATHistoryWidget.setVisible(self.gccPHATHistoryWidget.isHidden())
         elif key == QtCore.Qt.Key_0 and QtGui.QApplication.keyboardModifiers() == QtCore.Qt.ControlModifier:
             self.rollingImages = not self.rollingImages
+        elif key == QtCore.Qt.Key_Left:
+            self.previousFile()
+        elif key == QtCore.Qt.Key_Right:
+            self.nextFile()
             
         super(QtGui.QMainWindow, self).keyPressEvent(event)
         
@@ -155,14 +159,14 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         logging.info('RealtimeGCCNMFInterfaceWindow: closing...')
         self.gccPHATPlotTimer.stop()
     
-    def initAudioFiles(self):
-        if isdir(self.audioPath):
-            audioDirectory = self.audioPath
+    def initAudioFiles(self, audioPath):
+        if isdir(audioPath):
+            audioDirectory = audioPath
             self.audioFilePaths = [join(audioDirectory, fileName) for fileName in listdir(audioDirectory) if fileName.endswith('wav')]
         elif self.audioPath.endswith('.wav'):
-            self.audioFilePaths = [self.audioPath]
+            self.audioFilePaths = [audioPath]
         else:
-            raise IOError('Unable to find wav files at: %s' % self.audioPath)
+            raise IOError('Unable to find wav files at: %s' % audioPath)
         self.selectedFileIndex = 0
         
     def initWindow(self):
@@ -513,10 +517,24 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
     
     def nextFile(self):
         logging.info('GCCNMFInterface: nextFile()' )
-    
+        if len(self.audioFilePaths) > 1:
+            self.selectedFileIndex += 1
+            self.selectedFileIndex %= len(self.audioFilePaths)
+            self.updateAudioPath()
+            
     def previousFile(self):
         logging.info('GCCNMFInterface: previousFile()' )
-    
+        if len(self.audioFilePaths) > 1:
+            self.selectedFileIndex -= 1
+            self.selectedFileIndex %= len(self.audioFilePaths)
+            self.updateAudioPath()
+            
+    def updateAudioPath(self):
+        audioPath = self.audioFilePaths[self.selectedFileIndex]
+        self.paramsNamespace.fileName = self.audioFilePaths[self.selectedFileIndex] 
+        self.gccNMFParams.microphoneSeparationInMetres = MICROPHONE_SEPARATIONS[basename(audioPath)]
+        self.gccNMFDirtyParamNames.append('microphoneSeparationInMetres')
+        
     def dictionarySizeChanged(self, changeGCCNMFProcessor=True):
         self.dictionarySize = self.dictionarySizes[self.dictionarySizeDropDown.currentIndex()]
         logging.info('GCCNMFInterface: setting dictionarySize: %d' % self.dictionarySize)
