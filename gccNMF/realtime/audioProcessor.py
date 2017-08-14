@@ -34,9 +34,11 @@ import os
 from gccNMF.wavfile import pcm2float, float2pcm
 
 class PyAudioStreamProcessor(Process):
-    def __init__(self, numChannels, sampleRate, windowSize, hopSize, blockSize, deviceNameQuery,
+    def __init__(self, params, numChannels, sampleRate, windowSize, hopSize, blockSize, deviceNameQuery,
                  playingFlag, paramsNamespace, inputFrames, outputFrames, processFramesEvent, processFramesDoneEvent, terminateEvent):
         super(PyAudioStreamProcessor, self).__init__()
+
+        self.params = params
 
         self.numChannels = numChannels
         self.sampleRate = sampleRate
@@ -125,9 +127,7 @@ class PyAudioStreamProcessor(Process):
         if self.sampleIndex+numFrames >= self.numFrames:
             self.sampleIndex = 0
         
-        inputBuffer = self.samples[self.sampleIndex*self.bytesPerFrameAllChannels:(self.sampleIndex+numFrames)*self.bytesPerFrameAllChannels]
-        inputIntArray = np.frombuffer(inputBuffer, dtype='<i2')
-        self.inputFrames[:] = pcm2float(inputIntArray).reshape(-1, self.numChannels).T
+        self.inputFrames[:] = self.samples[:, self.sampleIndex:self.sampleIndex+numFrames]
         self.sampleIndex += numFrames
         
         #logging.info('AudioStreamProcessor: setting processFramesEvent')
@@ -141,6 +141,7 @@ class PyAudioStreamProcessor(Process):
         try:
             outputBuffer = np.getbuffer(outputIntArray)
         except:
+            logging.info('AudioStreamProcessor: getbuffer failed... calling tobytes')
             outputBuffer = outputIntArray.tobytes()
         
         self.processingTimes.append(tm.time() - startTime)
@@ -217,14 +218,20 @@ class PyAudioStreamProcessor(Process):
         
         waveFile = wave.open(self.fileName, 'rb')
         self.numFrames = waveFile.getnframes()
-        self.samples = waveFile.readframes(self.numFrames)
+        samplesString = waveFile.readframes(self.numFrames)
         self.sampleRate = waveFile.getframerate()
         self.bytesPerFrame = waveFile.getsampwidth()
         self.bytesPerFrameAllChannels = self.bytesPerFrame * self.numChannels
         self.format = self.pyaudio.get_format_from_width(self.bytesPerFrame)
         waveFile.close()
-        self.waveFile = wave.open(self.fileName, 'rb')
             
+        samplesIntArray = np.frombuffer(samplesString, dtype='<i2')
+        self.samples = pcm2float(samplesIntArray).reshape(-1, self.numChannels).T
+        if self.params.normalizeInput:
+            maxAbsAmplitude = np.max(np.abs(self.samples))
+            self.samples /= (maxAbsAmplitude / self.params.normalizeInputMaxValue)
+            logging.info('AudioStreamProcessor: normalizing input. Max abs was %f, now %f' % (maxAbsAmplitude, np.max(np.abs(self.samples))) )
+
         self.deviceIndex = self.getDeviceIndex(self.deviceNameQuery)
             
         self.sampleIndex = 0

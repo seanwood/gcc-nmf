@@ -39,8 +39,8 @@ from gccNMF.realtime.gccNMFPretraining import getDictionariesW
 INT_OPTIONS = ['numTDOAs', 'numTDOAHistory', 'numSpectrogramHistory', 'numChannels',
                'windowSize', 'hopSize', 'blockSize', 'dictionarySize', 'numHUpdates',
                'fullscreenDelay']
-FLOAT_OPTIONS = ['gccPHATNLAlpha', 'microphoneSeparationInMetres']
-BOOL_OPTIONS = ['gccPHATNLEnabled']
+FLOAT_OPTIONS = ['gccPHATNLAlpha', 'microphoneSeparationInMetres', 'normalizeInputMaxValue']
+BOOL_OPTIONS = ['gccPHATNLEnabled', 'normalizeInput']
 STRING_OPTIONS = ['dictionaryType', 'audioPath', 'deviceNameQuery', 'startupWindowMode']
 
 def getDefaultConfig():
@@ -59,16 +59,19 @@ def getDefaultConfig():
     
     config['Audio'] = {'numChannels': '2',
                        'sampleRate': '16000',
-                       'deviceNameQuery': 'iMic'}
+                       'normalizeInput': 'True',
+                       'normalizeInputMaxValue': '0.99',
+                       'deviceNameQuery': 'None'}
     
     config['STFT'] = {'windowSize': '1024',
                       'hopSize': '512',
-                      'blockSize': '512'}
+                      'blockSize': '1024'}
     
     config['NMF'] = {'dictionarySize': '50',
                      'dictionarySizes': '[1, 2, 3, 4, 5, 10, 25, 50, 100, 200, 300, 400, 500]',
                      'dictionaryType': 'Pretrained',
                      'numHUpdates': '0'}
+    
     config['UI'] = {'startupWindowMode': 'fullscreen',
                     'linuxFullscreenDelay': '1000'}
     
