@@ -440,7 +440,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.dictionaryViewBox = self.dictionaryWidget.addViewBox()
         self.dictionaryImageItem = pg.ImageItem()  # 1 - visualizedDictionary)#, border=self.borderColor)
         self.dictionaryViewBox.addItem(self.dictionaryImageItem)
-        self.dictionarySizeChanged(False)
+        self.dictionarySizeChanged(self.dictionarySizeDropDown.currentIndex(), False)
 
     def getAudioPlaybackGain(self):
         value = self.audioPlaybackGainSlider.value() / 100.0
@@ -535,7 +535,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.gccNMFParams.microphoneSeparationInMetres = MICROPHONE_SEPARATIONS[basename(audioPath)]
         self.gccNMFDirtyParamNames.append('microphoneSeparationInMetres')
         
-    def dictionarySizeChanged(self, changeGCCNMFProcessor=True):
+    def dictionarySizeChanged(self, currentIndex, changeGCCNMFProcessor=True):
         self.dictionarySize = self.dictionarySizes[self.dictionarySizeDropDown.currentIndex()]
         logging.info('GCCNMFInterface: setting dictionarySize: %d' % self.dictionarySize)
         
@@ -550,8 +550,8 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         
         if changeGCCNMFProcessor:
             self.gccNMFParams.dictionarySize = self.dictionarySize
-            self.gccNMFDirtyParamNames.append('dictionarySize')    
-    
+            self.gccNMFDirtyParamNames.append('dictionarySize')
+
 def generalizedGaussian(x, alpha, beta, mu):
     return np.exp( - (np.abs(x-mu) / alpha) ** beta )
         

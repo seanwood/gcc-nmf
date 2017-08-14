@@ -58,12 +58,15 @@ def getDictionariesW(windowSize, dictionarySizes, ordered=False):
     return orderedDictionariesW
     
 def getOrderedDictionary(W):
-    numFreq, _ = W.shape
-    spectralCentroids = np.sum( np.arange(numFreq)[:, np.newaxis] * W, axis=0, keepdims=True ) / np.sum(W, axis=0, keepdims=True)
-    spectralCentroids = np.squeeze(spectralCentroids)
-    orderedAtomIndexes = np.argsort(spectralCentroids)#[::-1]
-    orderedW = np.squeeze(W[:, orderedAtomIndexes])
-    return orderedW
+    numFreq, numAtom = W.shape
+    if numAtom == 1:
+        return W
+    else:
+        spectralCentroids = np.sum( np.arange(numFreq)[:, np.newaxis] * W, axis=0, keepdims=True ) / np.sum(W, axis=0, keepdims=True)
+        spectralCentroids = np.squeeze(spectralCentroids)
+        orderedAtomIndexes = np.argsort(spectralCentroids)#[::-1]
+        orderedW = np.squeeze(W[:, orderedAtomIndexes])
+        return orderedW
     
 def loadPretrainedW(dictionarySize, retrainW=False):
     pretrainedWFilePath = PRETRAINED_W_PATH_TEMPLATE % dictionarySize

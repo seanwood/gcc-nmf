@@ -68,8 +68,8 @@ def getDefaultConfig():
                       'hopSize': '512',
                       'blockSize': '1024'}
     
-    config['NMF'] = {'dictionarySize': '50',
-                     'dictionarySizes': '[1, 2, 3, 4, 5, 10, 25, 50, 100, 200, 300, 400, 500]',
+    config['NMF'] = {'dictionarySize': '64',
+                     'dictionarySizes': '[1, 2, 4, 8, 16, 32, 64, 100, 200, 300, 400, 500]',
                      'dictionaryType': 'Pretrained',
                      'numHUpdates': '0'}
     
