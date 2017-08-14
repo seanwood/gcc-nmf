@@ -65,8 +65,8 @@ def getDefaultConfig():
                       'hopSize': '512',
                       'blockSize': '512'}
     
-    config['NMF'] = {'dictionarySize': '64',
-                     'dictionarySizes': '[64, 128, 256, 512, 1024]',
+    config['NMF'] = {'dictionarySize': '50',
+                     'dictionarySizes': '[1, 2, 3, 4, 5, 10, 25, 50, 100, 200, 300, 400, 500]',
                      'dictionaryType': 'Pretrained',
                      'numHUpdates': '0'}
     config['UI'] = {'startupWindowMode': 'fullscreen',
