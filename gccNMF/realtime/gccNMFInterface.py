@@ -26,7 +26,7 @@ SOFTWARE.
 
 import logging
 from os import listdir
-from os.path import join, isdir
+from os.path import join, isdir, abspath
 from collections import OrderedDict
 import platform
 
@@ -38,6 +38,17 @@ from gccNMF.realtime.gccNMFProcessor import TARGET_MODE_BOXCAR, TARGET_MODE_MULT
 
 CONTINUOUS_SLIDERS = True
 INFO_HIDDEN_ON_STARTUP = True
+
+# Icons from https://icons8.com
+RESOURCES_DIR = join( abspath( join( __file__, '../resources' ) ))
+PLAY_ON_ICON_PATH = join(RESOURCES_DIR, 'play-on.png')
+PLAY_OFF_ICON_PATH = join(RESOURCES_DIR, 'play-off.png')
+FORWARD_ICON_PATH = join(RESOURCES_DIR, 'forward-button.png')
+BACK_ICON_PATH = join(RESOURCES_DIR, 'back-button.png')
+SEPARATION_ON_ICON_PATH = join(RESOURCES_DIR, 'separation-on.png')
+SEPARATION_OFF_ICON_PATH = join(RESOURCES_DIR, 'separation-off.png')
+INFO_ON_ICON_PATH = join(RESOURCES_DIR, 'info-on.png')
+INFO_OFF_ICON_PATH = join(RESOURCES_DIR, 'info-off.png')
         
 class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
     def __init__(self, params, audioPath, numTDOAs, gccPHATNLAlpha, gccPHATNLEnabled, dictionariesW, dictionarySize, dictionarySizes, dictionaryType, numHUpdates,
@@ -78,15 +89,6 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.gccNMFParams = gccNMFParams
         self.gccNMFDirtyParamNames = gccNMFDirtyParamNames
         
-        self.playIconString = 'Play'
-        self.pauseIconString = 'Pause'
-        self.separationOffIconString = 'Disabled'
-        self.separationOnIconString = 'Enabled'
-        '''self.playIconString = u'\u23F5'
-        self.pauseIconString = u'\u23F8'
-        self.separationOffIconString = u'\u21F6 | \u21F6'
-        self.separationOnIconString = u'\u21F6 | \u2192'''
-        
         self.targetModeIconStrings = {TARGET_MODE_BOXCAR: u'\u168B',
                                       TARGET_MODE_MULTIPLE: u'\u168D',
                                       TARGET_MODE_WINDOW_FUNCTION: u'\u1109'}
@@ -123,6 +125,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         if key == QtCore.Qt.Key_W and QtGui.QApplication.keyboardModifiers() == QtCore.Qt.ControlModifier:
             self.close()
         elif key == QtCore.Qt.Key_Return or key == QtCore.Qt.Key_Enter or key == QtCore.Qt.Key_Space:
+            self.playPauseButton.setChecked( not self.playPauseButton.isChecked() )
             self.togglePlay()
         elif key == QtCore.Qt.Key_F and QtGui.QApplication.keyboardModifiers() == QtCore.Qt.ControlModifier:
             if self.isFullScreen():
@@ -224,16 +227,20 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.initNMFControls()
         self.initUIControls()
          
+        mainControlsLayout = QtGui.QGridLayout()
+        mainControlsLayout.setContentsMargins(0, 0, 0, 0)
+        mainControlsLayout.setSpacing(0)
+        mainControlsLayout.addWidget(self.gccPHATPlotWidget, 0, 0, 1, 1) #fromRow, fromColumn, rowSpan, columnSpan
+        
+        controlsWidget = QtGui.QWidget()
         controlWidgetsLayout = QtGui.QVBoxLayout()
-        controlWidgetsLayout.addWidget(self.gccPHATPlotWidget)
+        controlsWidget.setLayout(controlWidgetsLayout)
         controlWidgetsLayout.addLayout(self.maskFunctionControlslayout)
-        #self.addSeparator(controlWidgetsLayout)
-        #controlWidgetsLayout.addLayout(self.nmfControlsLayout)
-        #self.addSeparator(controlWidgetsLayout)
         controlWidgetsLayout.addWidget(self.uiConrolsWidget)
+        mainControlsLayout.addWidget(controlsWidget, 1, 0, 1, 1) #fromRow, fromColumn, rowSpan, columnSpan
         
         self.controlsWidget = QtGui.QWidget()
-        self.controlsWidget.setLayout(controlWidgetsLayout)
+        self.controlsWidget.setLayout(mainControlsLayout)
         self.controlsWidget.setAutoFillBackground(True)
     
     def initMaskFunctionControls(self):
@@ -263,7 +270,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
                       "QSlider::handle:horizontal { "
                       "background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #b4b4b4, stop:1 #8f8f8f); "
                       "border: 1px solid #5c5c5c; "
-                      "width: 50px; "
+                      "width: 70px; "
                       "margin: -2px 0px; "
                       "} " % sliderHeight )
             slider.setMinimumSize(50, sliderHeight+5)
@@ -276,7 +283,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.targetModeWindowNoiseFloorSlider = addSlider('Floor', 0, 100, 0)
         
     def initMaskFunctionPlot(self):
-        self.gccPHATPlotWidget = self.createGraphicsLayoutWidget(self.backgroundColor, contentMargins=(6, 12, 18, 10))
+        self.gccPHATPlotWidget = self.createGraphicsLayoutWidget(self.backgroundColor, contentMargins=(0, 0, 0, 0))
         self.gccPHATPlotItem = self.gccPHATPlotWidget.addPlot()
         self.gccPHATPlotItem.getViewBox().setBackgroundColor((255, 255, 255, 150))
         self.gccPHATPlot = self.gccPHATPlotItem.plot()
@@ -325,15 +332,17 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         
         self.dictionarySizeDropDown = QtGui.QComboBox()
         self.dictionarySizeDropDown.setStyleSheet("QComboBox {font-size: %dpt;}" % fontSize)
+        self.dictionarySizeDropDown.setMinimumWidth(100)
         
         for dictionarySize in self.dictionarySizes:
             self.dictionarySizeDropDown.addItem( str(dictionarySize) )
         self.dictionarySizeDropDown.setMaximumWidth(75)
-        self.dictionarySizeDropDown.setMinimumHeight(controlHeight + 2)
+        self.dictionarySizeDropDown.setMinimumHeight(65)
         self.dictionarySizeDropDown.setCurrentIndex(self.dictionarySizes.index(self.dictionarySize))
         self.dictionarySizeDropDown.currentIndexChanged.connect(self.dictionarySizeChanged)
-        self.nmfControlsLayout.addWidget(self.dictionarySizeDropDown)
+        self.nmfControlsLayout.addSpacing(10)
         #self.nmfControlsLayout.addStretch(1)
+        self.nmfControlsLayout.addWidget(self.dictionarySizeDropDown)
         
         #self.nmfControlsLayout.addWidget(QtGui.QLabel('Num Updates:'))
         #self.numHUpdatesSpinBox = QtGui.QSpinBox()
@@ -349,8 +358,9 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         
         buttonHeight = self.getControlHeight()
         fontSize = self.getControlFontSize()
-        def addButton(label, widget=None, function=None):
-            button = QtGui.QPushButton(label)
+        def addButton(label=None, onIconPath=None, offIconPath=None, iconSize=None, widget=None, function=None):
+            button = QtGui.QPushButton(label) if label else QtGui.QPushButton() 
+            
             if function is None:
                 button.clicked.connect(lambda: widget.setVisible(widget.isHidden()))
             else:
@@ -359,14 +369,36 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
                                  'border-color: black;'
                                  'border-width: 5px;'
                                  'font: %dpt;}' % fontSize)
+            if onIconPath and offIconPath:
+                icon = QtGui.QIcon()
+                icon.addPixmap( QtGui.QPixmap(onIconPath), QtGui.QIcon.Normal, QtGui.QIcon.Off )
+                icon.addPixmap( QtGui.QPixmap(offIconPath), QtGui.QIcon.Normal, QtGui.QIcon.On )
+                button.setIcon(icon)
+                if iconSize:
+                    button.setIconSize( QtCore.QSize(iconSize,iconSize) )
+                button.setCheckable(True)
+            elif onIconPath:
+                icon = QtGui.QIcon(onIconPath)
+                button.setIcon(icon)
+                if iconSize:
+                    button.setIconSize( QtCore.QSize(iconSize,iconSize) )
+                
             button.setMinimumHeight(buttonHeight)
             buttonBarWidgetLayout.addWidget(button)
             return button
             
         buttonBarWidgetLayout.addLayout(self.nmfControlsLayout)
-        addButton('Info', function=self.toggleInfoViews)
-        self.toggleSeparationButton = addButton(self.separationOnIconString, function=self.toggleSeparation)
-        self.playPauseButton = addButton(self.playIconString, function=self.togglePlay)
+        
+        buttonBarWidgetLayout.addStretch(2)
+        self.toggleSeparationButton = addButton(onIconPath=SEPARATION_ON_ICON_PATH, offIconPath=SEPARATION_OFF_ICON_PATH, function=self.toggleSeparation, iconSize=80)
+        self.playPauseButton = addButton(onIconPath=PLAY_ON_ICON_PATH, offIconPath=PLAY_OFF_ICON_PATH, function=self.togglePlay, iconSize=80)
+        
+        buttonBarWidgetLayout.addStretch(1)
+        self.backButton = addButton(onIconPath=BACK_ICON_PATH, function=self.previousFile, iconSize=60)
+        self.forwardButton = addButton(onIconPath=FORWARD_ICON_PATH, function=self.nextFile, iconSize=60)
+        
+        buttonBarWidgetLayout.addStretch(1)
+        self.infoButton = addButton(onIconPath=INFO_ON_ICON_PATH, offIconPath=INFO_OFF_ICON_PATH, function=self.toggleInfoViews, iconSize=60)
 
     def initVisualizationWidgets(self):
         self.inputSpectrogramWidget = self.createGraphicsLayoutWidget(self.backgroundColor)
@@ -442,16 +474,14 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
             self.coefficientMaskHistoryImageItem.setImage(self.coefficientMaskHistory.values.T, levels=[0, 1])
         
     def toggleInfoViews(self):
-        isHidden = self.infoLabelWidgets[0].isHidden()
+        infoEnabled = self.infoButton.isChecked()
         for view in self.infoLabelWidgets:
-            view.setVisible(isHidden)
+            view.setVisible(infoEnabled)
         #map(lambda view: view.setVisible(isHidden), self.infoLabelWidgets) 
         
     def togglePlay(self):
-        playing = self.playPauseButton.text() == self.playIconString
+        playing = self.playPauseButton.isChecked() #self.playPauseButton.text() == self.playIconString
         logging.info('GCCNMFInterface: setting playing: %s' % playing)
-        
-        self.playPauseButton.setText(self.pauseIconString if playing else self.playIconString)
         
         if playing:
             QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
@@ -460,16 +490,22 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
             QtGui.QApplication.restoreOverrideCursor()
         else:
             self.audioPlayingFlag.value = playing
-
+        
         self.gccPHATPlotTimer.start(25) if playing else self.gccPHATPlotTimer.stop()
     
     def toggleSeparation(self):
-        separationEnabled = self.toggleSeparationButton.text() == self.separationOffIconString
+        separationEnabled = self.toggleSeparationButton.isChecked() #self.toggleSeparationButton.text() == self.separationOffIconString
         logging.info('GCCNMFInterface: toggleSeparation(): now %s' % separationEnabled)
-        self.toggleSeparationButton.setText(self.separationOnIconString if separationEnabled else self.separationOffIconString)
+        #self.toggleSeparationButton.setText(self.separationOnIconString if separationEnabled else self.separationOffIconString)
         
         self.gccNMFParams.separationEnabled = separationEnabled
         self.gccNMFDirtyParamNames.append('separationEnabled')
+    
+    def nextFile(self):
+        logging.info('GCCNMFInterface: nextFile()' )
+    
+    def previousFile(self):
+        logging.info('GCCNMFInterface: previousFile()' )
     
     def dictionarySizeChanged(self, changeGCCNMFProcessor=True):
         self.dictionarySize = self.dictionarySizes[self.dictionarySizeDropDown.currentIndex()]
@@ -477,12 +513,12 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         
         visualizedDictionary = self.dictionariesW[self.dictionaryType][self.dictionarySize]
         self.dictionaryImageItem.setImage(visualizedDictionary)
-        self.dictionaryViewBox.setXRange(0, visualizedDictionary.shape[0] - 1, padding=0)
-        self.dictionaryViewBox.setYRange(0, visualizedDictionary.shape[1] - 1, padding=0)
+        self.dictionaryViewBox.setXRange(0, visualizedDictionary.shape[0], padding=0)
+        self.dictionaryViewBox.setYRange(0, visualizedDictionary.shape[1], padding=0)
         
         self.coefficientMaskHistory = self.coefficientMaskHistories[self.dictionarySize]
-        self.coefficientMaskViewBox.setXRange(0, self.coefficientMaskHistory.values.shape[1] - 1, padding=0)
-        self.coefficientMaskViewBox.setYRange(0, self.coefficientMaskHistory.values.shape[0] - 1, padding=0)
+        self.coefficientMaskViewBox.setXRange(0, self.coefficientMaskHistory.values.shape[1], padding=0)
+        self.coefficientMaskViewBox.setYRange(0, self.coefficientMaskHistory.values.shape[0], padding=0)
         
         if changeGCCNMFProcessor:
             self.gccNMFParams.dictionarySize = self.dictionarySize
