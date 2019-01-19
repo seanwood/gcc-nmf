@@ -95,3 +95,6 @@ ENV/
 # Eclipse project settings
 .project
 .pydevproject
+
+# VSCode project settings
+.vscode

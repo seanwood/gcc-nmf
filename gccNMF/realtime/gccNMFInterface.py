@@ -38,8 +38,8 @@ from gccNMF.realtime.gccNMFProcessor import TARGET_MODE_BOXCAR, TARGET_MODE_MULT
 BUTTON_WIDTH = 50
         
 class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
-    def __init__(self, audioPath, numTDOAs, gccPHATNLAlpha, gccPHATNLEnabled, dictionariesW, dictionarySize, dictionarySizes, dictionaryType, numHUpdates,
-                 gccPHATHistory, inputSpectrogramHistory, outputSpectrogramHistory, coefficientMaskHistories,
+    def __init__(self, audioPath, numTDOAs, gccPHATNLAlpha, gccPHATNLEnabled, dictionariesW, dictionarySize, dictionarySizes, dictionaryType, numHUpdates, localizationEnabled, localizationWindowSize,
+                 gccPHATHistory, tdoaHistory, inputSpectrogramHistory, outputSpectrogramHistory, coefficientMaskHistories,
                  togglePlayAudioProcessQueue, togglePlayAudioProcessAck,
                  togglePlayGCCNMFProcessQueue, togglePlayGCCNMFProcessAck,
                  tdoaParamsGCCNMFProcessQueue, tdoaParamsGCCNMFProcessAck,
@@ -63,12 +63,15 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.targetTDOAEpsilon = self.numTDOAs / 10.0
         self.gccPHATNLAlpha = gccPHATNLAlpha
         self.gccPHATNLEnabled = gccPHATNLEnabled
+        self.localizationEnabled = localizationEnabled
+        self.localizationWindowSize = localizationWindowSize
         
         self.gccPHATPlotTimer = QtCore.QTimer()
         self.gccPHATPlotTimer.timeout.connect(self.updateGCCPHATPlot)
         
         self.gccPHATHistory = gccPHATHistory
         self.gccPHATHistorySize = gccPHATHistory.size()
+        self.tdoaHistory = tdoaHistory
         self.inputSpectrogramHistory = inputSpectrogramHistory
         self.outputSpectrogramHistory = outputSpectrogramHistory
         self.coefficientMaskHistories = coefficientMaskHistories
@@ -101,6 +104,8 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.initVisualizationWidgets()
         self.initWindowLayout()
         
+        self.localizationStateChanged()
+
         #self.show()
         self.showMaximized()
     
@@ -211,6 +216,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.initMaskFunctionControls()
         self.initMaskFunctionPlot()
         self.initNMFControls()
+        self.initLocalizationControls()
         self.initUIControls()
          
         controlWidgetsLayout = QtGui.QVBoxLayout()
@@ -218,6 +224,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         controlWidgetsLayout.addLayout(self.maskFunctionControlslayout)
         self.addSeparator(controlWidgetsLayout)
         controlWidgetsLayout.addLayout(self.nmfControlsLayout)
+        controlWidgetsLayout.addLayout(self.localizationControlsLayout)
         self.addSeparator(controlWidgetsLayout)
         controlWidgetsLayout.addWidget(self.uiConrolsWidget)
         
@@ -232,19 +239,20 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.maskFunctionControlslayout.addLayout(labelsLayout)
         self.maskFunctionControlslayout.addLayout(slidersLayout)
         def addSlider(label, changedFunction, minimum, maximum, value):
-            labelsLayout.addWidget(QtGui.QLabel(label))
+            labelWidget = QtGui.QLabel(label)
+            labelsLayout.addWidget(labelWidget)
             slider = QtGui.QSlider(QtCore.Qt.Horizontal)
             slider.setMinimum(minimum)
             slider.setMaximum(maximum)
             slider.setValue(value)
             slider.sliderReleased.connect(changedFunction)
             slidersLayout.addWidget(slider)
-            return slider
+            return slider, labelWidget
         
-        self.targetModeWindowTDOASlider = addSlider('Center:', self.tdoaRegionChanged, 0, 100, 50)
-        self.targetModeWindowWidthSlider = addSlider('Width:', self.tdoaRegionChanged, 1, 101, 50)
-        self.targetModeWindowBetaSlider = addSlider('Shape:', self.tdoaRegionChanged, 0, 100, 50)
-        self.targetModeWindowNoiseFloorSlider = addSlider('Floor:', self.tdoaRegionChanged, 0, 100, 0)
+        self.targetModeWindowTDOASlider, self.targetModeWindowTDOALabel = addSlider('Center:', self.tdoaRegionChanged, 0, 100, 50)
+        self.targetModeWindowWidthSlider, _ = addSlider('Width:', self.tdoaRegionChanged, 1, 101, 50)
+        self.targetModeWindowBetaSlider, _ = addSlider('Shape:', self.tdoaRegionChanged, 0, 100, 50)
+        self.targetModeWindowNoiseFloorSlider, _ = addSlider('Floor:', self.tdoaRegionChanged, 0, 100, 0)
         
     def initMaskFunctionPlot(self):
         self.gccPHATPlotWidget = self.createGraphicsLayoutWidget(self.backgroundColor, contentMargins=(6, 12, 18, 10))
@@ -265,7 +273,7 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.targetWindowFunctionPlot = TargetWindowFunctionPlot(self.targetTDOARegion, self.targetModeWindowTDOASlider, self.targetModeWindowBetaSlider, self.targetModeWindowNoiseFloorSlider, self.targetModeWindowWidthSlider, self.numTDOAs, pen=self.targetWindowFunctionPen)
         self.gccPHATPlotItem.addItem(self.targetWindowFunctionPlot)
         self.targetWindowFunctionPlot.updateData()
-        
+
     def initNMFControls(self):
         self.nmfControlsLayout = QtGui.QHBoxLayout()
         self.nmfControlsLayout.addStretch(1)
@@ -284,6 +292,25 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.nmfControlsLayout.addWidget(self.numHUpdatesSpinBox)
         self.nmfControlsLayout.addStretch(1)
     
+    def initLocalizationControls(self):
+        self.localizationControlsLayout = QtGui.QHBoxLayout()
+        self.localizationControlsLayout.addStretch(3)
+        self.localizationCheckBox = QtGui.QCheckBox('Enable Localization')
+        self.localizationCheckBox.setChecked(self.localizationEnabled)
+        self.localizationCheckBox.stateChanged.connect(self.localizationStateChanged)
+        self.localizationControlsLayout.addWidget(self.localizationCheckBox)
+
+        self.localizationControlsLayout.addStretch(1)
+        self.localizationWindowSizeLabel = QtGui.QLabel('Sliding Window Size:')
+        self.localizationControlsLayout.addWidget(self.localizationWindowSizeLabel)
+        self.localziaitonWindowSizeSpinBox = QtGui.QSpinBox()
+        self.localziaitonWindowSizeSpinBox.setMinimum(1)
+        self.localziaitonWindowSizeSpinBox.setMaximum(128)
+        self.localziaitonWindowSizeSpinBox.setValue(self.localizationWindowSize)
+        self.localziaitonWindowSizeSpinBox.valueChanged.connect(self.localizationParamsChanged)
+        self.localizationControlsLayout.addWidget(self.localziaitonWindowSizeSpinBox)
+        self.localizationControlsLayout.addStretch(3)
+
     def initUIControls(self):
         self.uiConrolsWidget = QtGui.QWidget()
         buttonBarWidgetLayout = QtGui.QHBoxLayout(spacing=0)
@@ -326,6 +353,9 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         gccPHATHistoryViewBox.addItem(self.gccPHATImageItem)
         gccPHATHistoryViewBox.setRange(xRange=(0, self.gccPHATHistory.values.shape[1] - 1), yRange=(0, self.gccPHATHistory.values.shape[0] - 1), padding=0)
         
+        self.tdoaPlotDataItem = pg.PlotDataItem( pen=pg.mkPen((255, 0, 0, 255), width=4) )
+        gccPHATHistoryViewBox.addItem(self.tdoaPlotDataItem)
+
         dictionarySize = self.dictionarySizes[self.dictionarySizeDropDown.currentIndex()]
         self.coefficientMaskWidget = self.createGraphicsLayoutWidget(self.backgroundColor)
         self.coefficientMaskViewBox = self.coefficientMaskWidget.addViewBox()
@@ -359,14 +389,20 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
         self.gccPHATPlot.setData(y=gccPHATValues)
         if self.rollingImages:
             self.gccPHATImageItem.setImage(-self.gccPHATHistory.getUnraveledArray().T)
+            self.tdoaPlotDataItem.setData(y=self.tdoaHistory.getUnraveledArray()[0])
             self.inputSpectrogramHistoryImageItem.setImage(self.inputSpectrogramHistory.getUnraveledArray().T)
             self.outputSpectrogramHistoryImageItem.setImage(self.outputSpectrogramHistory.getUnraveledArray().T)
             self.coefficientMaskHistoryImageItem.setImage(self.coefficientMaskHistory.getUnraveledArray().T, levels=[0, 1])
         else:
             self.gccPHATImageItem.setImage(-self.gccPHATHistory.values.T)
+            self.tdoaPlotDataItem.setData(y=self.tdoaHistory.values[0])
             self.inputSpectrogramHistoryImageItem.setImage(self.inputSpectrogramHistory.values.T)
             self.outputSpectrogramHistoryImageItem.setImage(self.outputSpectrogramHistory.values.T)
             self.coefficientMaskHistoryImageItem.setImage(self.coefficientMaskHistory.values.T, levels=[0, 1])
+        
+        if self.localizationCheckBox.isChecked():
+            sliderValue = self.tdoaHistory.get()[0] / (self.numTDOAs-1) * 100
+            self.targetModeWindowTDOASlider.setValue(sliderValue)
         
     def toggleInfoViews(self):
         isHidden = self.infoLabelWidgets[0].isHidden()
@@ -439,7 +475,14 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
                           'targetTDOANoiseFloor': self.targetWindowFunctionPlot.getNoiseFloor()},
                          'gccNMFProcessTDOAParameters (region)')
         self.targetWindowFunctionPlot.updateData()
-    
+
+    def localizationParamsChanged(self):
+        self.queueParams(self.tdoaParamsGCCNMFProcessQueue,
+                         self.tdoaParamsGCCNMFProcessAck,
+                         {'localizationEnabled': self.localizationCheckBox.isChecked(),
+                          'localizationWindowSize': int(self.localziaitonWindowSizeSpinBox.value())},
+                         'gccNMFProcessTDOAParameters (localization)')
+        
     def dictionarySizeChanged(self, changeGCCNMFProcessor=True):
         self.dictionarySize = self.dictionarySizes[self.dictionarySizeDropDown.currentIndex()]
         logging.info('GCCNMFInterface: setting dictionarySize: %d' % self.dictionarySize)
@@ -468,6 +511,15 @@ class RealtimeGCCNMFInterfaceWindow(QtGui.QMainWindow):
                          {'dictionaryType': dictionaryType},
                          'gccNMFProcessTogglePlayParameters')
 
+    def localizationStateChanged(self):
+        onlineLocalizationEnabled = self.localizationCheckBox.isChecked()
+        self.targetModeWindowTDOASlider.setEnabled(not onlineLocalizationEnabled)
+        self.targetModeWindowTDOALabel.setEnabled(not onlineLocalizationEnabled)
+        self.localziaitonWindowSizeSpinBox.setEnabled(onlineLocalizationEnabled)
+        self.localizationWindowSizeLabel.setEnabled(onlineLocalizationEnabled)
+
+        self.localizationParamsChanged()
+    
     def queueParams(self, queue, ack, params, label='params'):
         ack.clear()
         logging.debug('GCCNMFInterface: putting %s' % label)

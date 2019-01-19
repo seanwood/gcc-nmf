@@ -73,6 +73,7 @@ class RealtimeGCCNMF(object):
         
     def initHistoryBuffers(self, params):
         self.gccPHATHistory = SharedMemoryCircularBuffer( (params.numTDOAs, params.numTDOAHistory) )
+        self.tdoaHistory = SharedMemoryCircularBuffer( (1, params.numTDOAHistory) )
         self.inputSpectrogramHistory = SharedMemoryCircularBuffer( (params.numFreq, params.numSpectrogramHistory) )
         self.outputSpectrogramHistory = SharedMemoryCircularBuffer( (params.numFreq, params.numSpectrogramHistory) )
         self.coefficientMaskHistories = {}
@@ -84,8 +85,8 @@ class RealtimeGCCNMF(object):
                                                  self.togglePlayAudioProcessQueue, self.togglePlayAudioProcessAck,
                                                  self.inputFrames, self.outputFrames, self.processFramesEvent, self.processFramesDoneEvent, self.terminateEvent)
         self.oladProcessor = OverlapAddProcessor(params.numChannels, params.windowSize, params.hopSize, params.blockSize, params.windowsPerBlock, self.inputFrames, self.outputFrames)
-        self.gccNMFProcess = GCCNMFProcess(self.oladProcessor, params.sampleRate, params.windowSize, params.windowsPerBlock, params.dictionariesW, params.dictionaryType, params.dictionarySize, params.numHUpdates, params.microphoneSeparationInMetres,
-                                           self.gccPHATHistory, self.inputSpectrogramHistory, self.outputSpectrogramHistory, self.coefficientMaskHistories,
+        self.gccNMFProcess = GCCNMFProcess(self.oladProcessor, params.sampleRate, params.windowSize, params.windowsPerBlock, params.dictionariesW, params.dictionaryType, params.dictionarySize, params.numHUpdates, params.microphoneSeparationInMetres, params.localizationEnabled, params.localizationWindowSize,
+                                           self.gccPHATHistory, self.tdoaHistory, self.inputSpectrogramHistory, self.outputSpectrogramHistory, self.coefficientMaskHistories,
                                            self.tdoaParamsGCCNMFProcessQueue, self.tdoaParamsGCCNMFProcessAck, self.togglePlayGCCNMFProcessQueue, self.togglePlayGCCNMFProcessAck, self.toggleSeparationGCCNMFProcessQueue, self.toggleSeparationGCCNMFProcessAck,
                                            self.processFramesEvent, self.processFramesDoneEvent, self.terminateEvent)
         self.audioProcess.start()
@@ -98,8 +99,8 @@ class RealtimeGCCNMF(object):
             
             app = QtGui.QApplication([])
             gccNMFInterfaceWindow = RealtimeGCCNMFInterfaceWindow(params.audioPath, params.numTDOAs, params.gccPHATNLAlpha, params.gccPHATNLEnabled, params.dictionariesW, params.dictionarySize,
-                                                                  params.dictionarySizes, params.dictionaryType, params.numHUpdates,
-                                                                  self.gccPHATHistory, self.inputSpectrogramHistory, self.outputSpectrogramHistory, self.coefficientMaskHistories,
+                                                                  params.dictionarySizes, params.dictionaryType, params.numHUpdates, params.localizationEnabled, params.localizationWindowSize,
+                                                                  self.gccPHATHistory, self.tdoaHistory, self.inputSpectrogramHistory, self.outputSpectrogramHistory, self.coefficientMaskHistories,
                                                                   self.togglePlayAudioProcessQueue, self.togglePlayAudioProcessAck,
                                                                   self.togglePlayGCCNMFProcessQueue, self.togglePlayGCCNMFProcessAck,
                                                                   self.tdoaParamsGCCNMFProcessQueue, self.tdoaParamsGCCNMFProcessAck,

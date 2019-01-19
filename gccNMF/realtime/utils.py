@@ -57,7 +57,12 @@ class SharedMemoryCircularBuffer():
             self.values[..., :numAtStart] = newValues[..., numAtEnd:]
             self.index.value = numAtStart
             return self.index.value
-        
+    
+    def get(self, index=None):
+        index = (self.index.value-1)%self.numValues if index is None else (index % self.numValues)
+        #print(self.numValues, self.values.shape)
+        return self.values[..., index]
+
     def getUnraveledArray(self):
         return concatenate( [self.values[:, self.index.value:], self.values[:, :self.index.value]], axis=-1 ) 
         

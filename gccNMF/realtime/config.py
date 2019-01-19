@@ -37,9 +37,10 @@ from gccNMF.defs import DEFAULT_AUDIO_FILE, DEFAULT_CONFIG_FILE
 from gccNMF.realtime.gccNMFPretraining import getDictionariesW
 
 INT_OPTIONS = ['numTDOAs', 'numTDOAHistory', 'numSpectrogramHistory', 'numChannels',
-               'windowSize', 'hopSize', 'blockSize', 'dictionarySize', 'numHUpdates']
+               'windowSize', 'hopSize', 'blockSize', 'dictionarySize', 'numHUpdates',
+               'localizationWindowSize']
 FLOAT_OPTIONS = ['gccPHATNLAlpha', 'microphoneSeparationInMetres']
-BOOL_OPTIONS = ['gccPHATNLEnabled']
+BOOL_OPTIONS = ['gccPHATNLEnabled', 'localizationEnabled']
 STRING_OPTIONS = ['dictionaryType', 'audioPath']
 
 def getDefaultConfig():
@@ -54,7 +55,9 @@ def getDefaultConfig():
                       'microphoneSeparationInMetres': '0.1',
                       'targetTDOAEpsilon': '5.0',
                       'targetTDOABeta': '2.0',
-                      'targetTDOANoiseFloor': '0.0'}
+                      'targetTDOANoiseFloor': '0.0',
+                      'localizationEnabled': 'True',
+                      'localizationWindowSize': '6'}
     
     config['Audio'] = {'numChannels': '2',
                        'sampleRate': '16000',

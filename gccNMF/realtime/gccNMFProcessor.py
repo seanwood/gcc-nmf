@@ -37,15 +37,15 @@ TARGET_MODE_MULTIPLE = 1
 TARGET_MODE_WINDOW_FUNCTION = 2
 
 class GCCNMFProcess(Process):
-    def __init__(self, oladProcessor, sampleRate, windowSize, numTimePerChunk, dictionariesW, dictionaryType, dictionarySize, numHUpdates, microphoneSeparationInMetres,
-                 gccPHATHistory, inputSpectrogramHistory, outputSpectrogramHistory, coefficientMaskHistories, 
+    def __init__(self, oladProcessor, sampleRate, windowSize, numTimePerChunk, dictionariesW, dictionaryType, dictionarySize, numHUpdates, microphoneSeparationInMetres, localizationEnabled, localizationWindowSize,
+                 gccPHATHistory, tdoaHistory, inputSpectrogramHistory, outputSpectrogramHistory, coefficientMaskHistories, 
                  tdoaParametersQueue, tdoaParametersAck, togglePlayQueue, togglePlayAck, toggleSeparationQueue, toggleSeparationAck,
                  processFramesEvent, processFramesDoneEvent, terminateEvent):
         super(GCCNMFProcess, self).__init__()
 
         self.oladProcessor = oladProcessor
         self.gccNMFProcessor = GCCNMFProcessor(sampleRate, windowSize, numTimePerChunk, dictionariesW, dictionaryType, dictionarySize, numHUpdates, microphoneSeparationInMetres,
-                                               gccPHATHistory, inputSpectrogramHistory, outputSpectrogramHistory, coefficientMaskHistories)
+                                               localizationEnabled, localizationWindowSize, gccPHATHistory, tdoaHistory, inputSpectrogramHistory, outputSpectrogramHistory, coefficientMaskHistories)
         
         self.tdoaParametersQueue = tdoaParametersQueue
         self.tdoaParametersAck = tdoaParametersAck
@@ -109,6 +109,12 @@ class GCCNMFProcess(Process):
             targetTDOAIndexes = parameters['targetTDOAIndexes']
             logging.info( 'GCCNMFProcessor: setting targetTDOAIndexes: %s' % str(targetTDOAIndexes) )
             self.gccNMFProcessor.setTargetTDOAIndexes(targetTDOAIndexes)
+        elif 'localizationEnabled' in parameters:
+            localizationEnabled = parameters['localizationEnabled']
+            localizationWindowSize = parameters['localizationWindowSize']
+            logging.info( 'GCCNMFProcessor: setting localizationEnabled: %s, localizationWindowSize %s' % (str(localizationEnabled), str(localizationWindowSize)) )
+            self.gccNMFProcessor.localizationEnabled = localizationEnabled
+            self.gccNMFProcessor.localizationWindowSize = localizationWindowSize
         else:
             targetTDOAIndex = parameters['targetTDOAIndex']
             targetTDOAEpsilon = parameters['targetTDOAEpsilon']
@@ -160,7 +166,7 @@ class GCCNMFProcess(Process):
     
 class GCCNMFProcessor(object):
     def __init__(self, sampleRate, windowSize, numTimePerChunk, dictionariesW, dictionaryType, dictionarySize, numHUpdates, microphoneSeparationInMetres,
-                 gccPHATHistory=None, inputSpectrogramHistory=None, outputSpectrogramHistory=None, coefficientMaskHistories=None):
+                 localizationEnabled, localizationWindowSize, gccPHATHistory=None, tdoaHistory=None, inputSpectrogramHistory=None, outputSpectrogramHistory=None, coefficientMaskHistories=None):
         super(GCCNMFProcessor, self).__init__()
         
         self.sampleRate = sampleRate
@@ -172,6 +178,7 @@ class GCCNMFProcessor(object):
         self.microphoneSeparationInMetres = microphoneSeparationInMetres
         
         self.gccPHATHistory = gccPHATHistory
+        self.tdoaHistory = tdoaHistory
         self.inputSpectrogramHistory = inputSpectrogramHistory
         self.outputSpectrogramHistory = outputSpectrogramHistory
         self.coefficientMaskHistories = coefficientMaskHistories
@@ -181,6 +188,8 @@ class GCCNMFProcessor(object):
         
         self.numTDOAs = None
         self.separationEnabled = True
+        self.localizationEnabled = localizationEnabled
+        self.localizationWindowSize = localizationWindowSize
         self.targetMode = TARGET_MODE_WINDOW_FUNCTION
         
         from theano import shared
@@ -208,6 +217,14 @@ class GCCNMFProcessor(object):
             self.inputSpectrogramHistory.set( -np.mean(np.abs(self.complexMixtureSpectrogram), axis=0) ** (1/3.0) )
         if self.gccPHATHistory:
             self.gccPHATHistory.set( np.nanmean(realGCC, axis=0).T )
+        if self.tdoaHistory:
+            if self.localizationEnabled:
+                gccPHATHistory = self.gccPHATHistory.getUnraveledArray()
+                tdoaIndex = np.argmax( np.nanmean(gccPHATHistory[:, -self.localizationWindowSize:], axis=-1) )
+                #tdoaIndex = (self.targetTDOAIndex.get_value() + 1) % self.numTDOAs
+                #tdoaIndex = np.random.randint(0, self.numTDOAs+1)
+                self.targetTDOAIndex.set_value(tdoaIndex)
+            self.tdoaHistory.set( np.array( [[self.targetTDOAIndex.get_value()]] ) )
         if self.outputSpectrogramHistory:
             self.outputSpectrogramHistory.set( -np.nanmean(np.abs(outputSpectrogram), axis=0) ** (1/3.0) )
         
