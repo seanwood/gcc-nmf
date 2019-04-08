@@ -23,29 +23,39 @@ SOFTWARE.
 --->
 
 # GCC-NMF
-GCC-NMF is a blind source separation algorithm that combines the [GCC](http://ieeexplore.ieee.org/abstract/document/1162830/) spatial localization method with the [NMF](https://en.wikipedia.org/wiki/Non-negative_matrix_factorization) unsupervised dictionary learning algorithm. GCC-NMF has been applied to stereo speech separation and enhancement in both offline and real-time settings, though it is a generic source separation algorithm and could be applicable to other types of signals.
+GCC-NMF is a blind _source separation and denoising algorithm_ that combines the [GCC](http://ieeexplore.ieee.org/abstract/document/1162830/) spatial localization method with the [NMF](https://en.wikipedia.org/wiki/Non-negative_matrix_factorization) unsupervised dictionary learning algorithm. GCC-NMF has used for stereo speech separation and enhancement in both offline and real-time settings. Though we have focused on speech applications so far, GCC-NMF is a _generic source separation and denoising algorithm_ and may well be applicable to other types of signals.
 
-This GitHub repository is home to open source demonstrations in the form of **iPython Notebooks**:
+This GitHub repository provides:
 
-- [Offline Speech Separation](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/offlineSpeechSeparation.ipynb)
-- [Offline Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/offlineSpeechEnhancement.ipynb)
-- [Online Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/onlineSpeechEnhancement.ipynb)
-- [Low Latency Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/lowLatencySpeechEnhancement.ipynb)
+1. A standalone **Python executable** to execute and visualize GCC-NMF in real-time.
 
-and standalone **Python executables**:
+   - [Real-time Speech Enhancement: RT-GCC-NMF](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/realtimeSpeechEnhancement.ipynb)
+2. A series of **iPython notebooks** notebooks presenting GCC-NMF in tutorial style, building towards the low latency, real-time context:
+  - [Offline Speech Separation](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/offlineSpeechSeparation.ipynb)
+  - [Offline Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/offlineSpeechEnhancement.ipynb)
+  - [Online Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/onlineSpeechEnhancement.ipynb)
+  - [Low Latency Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/lowLatencySpeechEnhancement.ipynb)
 
-- [Real-time Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/realtimeSpeechEnhancement.ipynb)
+#### Journal Papers
 
-serving as demonstrations of material presented in the following papers:
+- Sean UN Wood, Jean Rouat, [*Unsupervised Low Latency Speech Enhancement with RT-GCC-NMF*](https://arxiv.org/abs/1904.03130), **IEEE Journal on Selected Topics in Signal Processing (JSTSP) Special Issue on Data Science: Machine Learning for Audio Signal Processing**, 2019.  
+DOI: [10.1109/JSTSP.2019.2909193](https://doi.org/10.1109/JSTSP.2019.2909193)
 
-- Sean UN Wood and Jean Rouat, [*Speech Separation with GCC-NMF*](http://www.isca-speech.org/archive/Interspeech_2016/pdfs/1449.PDF), **Interspeech 2016**.  
-DOI: [10.21437/Interspeech.2016-1449](http://dx.doi.org/10.21437/Interspeech.2016-1449)
-- Sean UN Wood, Jean Rouat, Stéphane Dupont, Gueorgui Pironkov, [*Speech Separation and Enhancement with GCC-NMF*](https://www.gel.usherbrooke.ca/rouat/publications/IEEE_ACMTrGCCNMFWoodRouat2017.pdf), **IEEE/ACM Transactions on Audio, Speech, and Language Processing**, vol. 25, no. 4, pp. 745–755, 2017.  
+- Sean UN Wood, Jean Rouat, Stéphane Dupont, Gueorgui Pironkov, [*Blind Speech Separation and Enhancement with GCC-NMF*](https://www.gel.usherbrooke.ca/rouat/publications/IEEE_ACMTrGCCNMFWoodRouat2017.pdf), **IEEE/ACM Transactions on Audio, Speech, and Language Processing (TASLP)**, vol. 25, no. 4, pp. 745–755, 2017.  
 DOI: [10.1109/TASLP.2017.2656805](https://doi.org/10.1109/TASLP.2017.2656805)
-- Sean UN Wood and Jean Rouat, [*Real-time Speech Enhancement with GCC-NMF*](https://www.researchgate.net/profile/Sean_Wood7/publication/318511757_Real-time_Speech_Enhancement_with_GCC-NMF/links/596ea657a6fdcc2416901891/Real-time-Speech-Enhancement-with-GCC-NMF.pdf), **Interspeech 2017**.
-- Sean UN Wood and Jean Rouat, [*Real-time Speech Enhancement with GCC-NMF: Demonstration on the Raspberry Pi and NVIDIA Jetson*](https://www.researchgate.net/profile/Sean_Wood7/publication/318946628_Real-time_Speech_Enhancement_with_GCC-NMF_Demonstration_on_the_Raspberry_Pi_and_NVIDIA_Jetson/links/59872715aca27266ada22465/Real-time-Speech-Enhancement-with-GCC-NMF-Demonstration-on-the-Raspberry-Pi-and-NVIDIA-Jetson.pdf), **Interspeech 2017 Show and Tell Demonstrations**.
+
+#### Conference Papers
 - Sean UN Wood and Jean Rouat, [*Towards GCC-NMF Speech Enhancement for Hearing Assistive Devices: Reducing Latency with Asymmetric Windows*](https://www.researchgate.net/profile/Sean_Wood7/publication/318814469_Towards_GCC-NMF_Speech_Enhancement_for_Hearing_Assistive_Devices_Reducing_Latency_with_Asymmetric_Windows/links/597ff39d0f7e9b8802ed2a6c/Towards-GCC-NMF-Speech-Enhancement-for-Hearing-Assistive-Devices-Reducing-Latency-with-Asymmetric-Windows.pdf), 1st International Workshop on 
 Challenges in Hearing Assistive Technology, **CHAT 2017**.
+- Sean UN Wood and Jean Rouat, [*Real-time Speech Enhancement with GCC-NMF*](https://www.researchgate.net/profile/Sean_Wood7/publication/318511757_Real-time_Speech_Enhancement_with_GCC-NMF/links/596ea657a6fdcc2416901891/Real-time-Speech-Enhancement-with-GCC-NMF.pdf), **Interspeech 2017**.
+- Sean UN Wood and Jean Rouat, [*Real-time Speech Enhancement with GCC-NMF: Demonstration on the Raspberry Pi and NVIDIA Jetson*](https://www.researchgate.net/profile/Sean_Wood7/publication/318946628_Real-time_Speech_Enhancement_with_GCC-NMF_Demonstration_on_the_Raspberry_Pi_and_NVIDIA_Jetson/links/59872715aca27266ada22465/Real-time-Speech-Enhancement-with-GCC-NMF-Demonstration-on-the-Raspberry-Pi-and-NVIDIA-Jetson.pdf), **Interspeech 2017 Show and Tell Demonstrations**.
+- Sean UN Wood and Jean Rouat, [*Speech Separation with GCC-NMF*](http://www.isca-speech.org/archive/Interspeech_2016/pdfs/1449.PDF), **Interspeech 2016**. 
+
+## Real-time Speech Enhancement: RT-GCC-NMF
+The [Real-time Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/realtimeSpeechEnhancement.ipynb) standalone Python executable is an implementation of the RT-GCC-NMF real-time speech enhancement algorithm. Users may 
+interactively modify system parameters including the NMF dictionary size and GCC-NMF masking function parameters, where the effects on speech enhancement quality may be heard in real-time.
+
+[![png](README_files/realtimeGCCNMFScreenshot.png)](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/realtimeSpeechEnhancement.ipynb)
   
 ## Offline Speech Separation
 
@@ -68,9 +78,3 @@ The [Online Speech Enhancement iPython notebook](https://nbviewer.jupyter.org/gi
 In the [Low Latency Speech Enhancement iPython notebook](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/lowLatencySpeechEnhancement.ipynb) we extend the online GCC-NMF approach to reduce algorithmic latency via asymmetric STFT windowing strategy. Long analysis windows maintain the high spectral resolution required by GCC-NMF, while short synthesis windows drastically reduce algorithmic latency with little effect on speech enhancement quality. Algorithmic latency can be reduced from over 64 ms using traditional symmetric STFT windowing to below 2 ms with the proposed asymmetric STFT windowing, provided sufficient computational power is available.
 
 [![png](README_files/lowLatencySpeechEnhancementNotebookThumbnail.png)](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/lowLatencySpeechEnhancement.ipynb)
-
-## Real-time Speech Enhancement
-The [Real-time Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/realtimeSpeechEnhancement.ipynb) standalone Python executable is a real-time implementation of the online GCC-NMF speech enhancement algorithm. Users may 
-interactively modify system parameters including the NMF dictionary size and GCC-NMF masking function parameters, where the effects on speech enhancement quality may be heard in real-time.
-
-[![png](README_files/realtimeGCCNMFScreenshot.png)](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/realtimeSpeechEnhancement.ipynb)
