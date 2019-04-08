@@ -31,10 +31,10 @@ This GitHub repository provides:
 
    - [Real-time Speech Enhancement: RT-GCC-NMF](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/realtimeSpeechEnhancement.ipynb)
 2. A series of **iPython notebooks** notebooks presenting GCC-NMF in tutorial style, building towards the low latency, real-time context:
-  - [Offline Speech Separation](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/offlineSpeechSeparation.ipynb)
-  - [Offline Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/offlineSpeechEnhancement.ipynb)
-  - [Online Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/onlineSpeechEnhancement.ipynb)
-  - [Low Latency Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/lowLatencySpeechEnhancement.ipynb)
+   - [Offline Speech Separation](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/offlineSpeechSeparation.ipynb)
+   - [Offline Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/offlineSpeechEnhancement.ipynb)
+   - [Online Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/onlineSpeechEnhancement.ipynb)
+   - [Low Latency Speech Enhancement](https://nbviewer.jupyter.org/github/seanwood/gcc-nmf/blob/master/notebooks/lowLatencySpeechEnhancement.ipynb)
 
 #### Journal Papers
 
