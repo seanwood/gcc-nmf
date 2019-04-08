@@ -23,7 +23,7 @@ SOFTWARE.
 --->
 
 # GCC-NMF
-GCC-NMF is a blind _source separation and denoising algorithm_ that combines the [GCC](http://ieeexplore.ieee.org/abstract/document/1162830/) spatial localization method with the [NMF](https://en.wikipedia.org/wiki/Non-negative_matrix_factorization) unsupervised dictionary learning algorithm. GCC-NMF has used for stereo speech separation and enhancement in both offline and real-time settings. Though we have focused on speech applications so far, GCC-NMF is a _generic source separation and denoising algorithm_ and may well be applicable to other types of signals.
+GCC-NMF is a blind _source separation and denoising algorithm_ that combines the [GCC](http://ieeexplore.ieee.org/abstract/document/1162830/) spatial localization method with the [NMF](https://en.wikipedia.org/wiki/Non-negative_matrix_factorization) unsupervised dictionary learning algorithm. GCC-NMF has been used for stereo speech separation and enhancement in both offline and real-time settings. Though we have focused on speech applications so far, GCC-NMF is a _generic source separation and denoising algorithm_ and may well be applicable to other types of signals.
 
 This GitHub repository provides:
 
